@@ -1,26 +1,93 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Design tokens — mirror the "Design system" board of the mso-pm UI canvas.
+   Status/priority/severity colours are NOT here: they come from each
+   organization's options in the database. */
+@theme {
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --color-canvas: #f6f6f4;
+  --color-surface: #ffffff;
+  --color-sunken: #fafaf8;
+  --color-subtle: #f1f0ec;
+  --color-muted: #ecebe7;
+  --color-track: #edece8;
+  --color-line: #e6e5e1;
+  --color-line-soft: #f0efeb;
+  --color-line-strong: #d6d5d0;
+
+  --color-ink: #1b1b1f;
+  --color-ink-2: #45454c;
+  --color-ink-3: #56565e;
+  --color-ink-4: #6e6e76;
+  --color-ink-5: #8a8a92;
+  --color-ink-6: #b5b4af;
+
+  --color-accent: #2d55c8;
+  --color-accent-hover: #1f3f9e;
+  --color-accent-soft: #eef2fc;
+  --color-accent-line: #c9d4f2;
+  --color-accent-ring: #dce4f8;
+
+  --color-danger: #b42a17;
+  --color-danger-ink: #a4271a;
+  --color-danger-soft: #fce9e6;
+  --color-danger-line: #f4c9c1;
+  --color-warn-ink: #9a4a0b;
+  --color-warn-soft: #fdf0e3;
+  --color-late: #b8400f;
+
+  --text-2xs: 11.5px;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 13.5px;
+  --text-md: 14px;
+  --text-lg: 15px;
+  --text-xl: 18px;
+  --text-2xl: 20px;
+  --text-3xl: 22px;
+
+  --shadow-pop: 0 10px 28px rgb(20 20 24 / 0.14);
+  --shadow-dialog: 0 24px 60px rgb(20 20 24 / 0.22);
+  --shadow-lift: 0 12px 28px rgb(20 20 24 / 0.16);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
 }
+
+/* Keyboard focus is always a 2px accent ring. */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Honour reduced motion everywhere. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes pop-in { from { opacity: 0; transform: translateY(4px) scale(0.99) } to { opacity: 1; transform: none } }
+@keyframes slide-in-right { from { transform: translateX(16px); opacity: 0 } to { transform: none; opacity: 1 } }
+@keyframes slide-in-up { from { transform: translateY(24px); opacity: 0.6 } to { transform: none; opacity: 1 } }
+
+@utility animate-fade { animation: fade-in 140ms ease-out; }
+@utility animate-pop { animation: pop-in 160ms ease-out; }
+@utility animate-drawer { animation: slide-in-right 180ms ease-out; }
+@utility animate-sheet { animation: slide-in-up 200ms ease-out; }
+
+@utility tabular { font-variant-numeric: tabular-nums; }
