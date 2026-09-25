@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { Check, ChevronDown, ChevronsUpDown, Plus, SlidersHorizontal } from "lucide-react";
 import { Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
-import { ROLE_LABELS } from "@/lib/permissions";
 import type { Organization } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useOrg } from "./org-provider";
@@ -43,7 +42,7 @@ export function OrgSwitcher({ compact }: { compact?: boolean }) {
         <OrgLogo org={org} size={compact ? 28 : 26} />
         {compact ? (
           <>
-            <span className="text-lg font-semibold">{org.name}</span>
+            <span className="max-w-[46vw] truncate text-lg font-semibold">{org.name}</span>
             <ChevronDown aria-hidden className="size-4 text-ink-4" />
           </>
         ) : (
@@ -51,7 +50,7 @@ export function OrgSwitcher({ compact }: { compact?: boolean }) {
             <span className="flex min-w-0 grow flex-col leading-tight">
               <span className="truncate text-base font-semibold">{org.name}</span>
               <span className="text-2xs text-ink-4">
-                {ROLE_LABELS[org.role]} · {org.memberCount} {org.memberCount === 1 ? "member" : "members"}
+                {org.roleName} · {org.memberCount} {org.memberCount === 1 ? "member" : "members"}
               </span>
             </span>
             <ChevronsUpDown aria-hidden className="size-4 text-ink-4" />
@@ -67,7 +66,7 @@ export function OrgSwitcher({ compact }: { compact?: boolean }) {
             {o.id === org.id ? (
               <Check aria-label="Current" className="size-3.5 text-accent" strokeWidth={2.4} />
             ) : (
-              <span className="text-2xs text-ink-4">{ROLE_LABELS[o.role]}</span>
+              <span className="text-2xs text-ink-4">{o.roleName}</span>
             )}
           </MenuItem>
         ))}

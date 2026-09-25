@@ -20,8 +20,8 @@ const BUCKETS = [
 
 export default async function MyTasksPage({ params }: PageProps<"/[org]/my-tasks">) {
   const { org, ctx } = await requireOrg(params);
-  const done = new Set(ctx.options.filter((o) => o.category === "completed").map((o) => o.id));
-  const tasks = (await listMyTasks(org.id, ctx.currentUserId)).filter((t) => !done.has(t.statusId));
+  const openStatusIds = ctx.options.filter((o) => o.kind === "task_status" && o.category !== "completed").map((o) => o.id);
+  const tasks = await listMyTasks(org.id, ctx.currentUserId, openStatusIds);
   const groups = BUCKETS.map((b) => ({
     ...b,
     tasks: tasks

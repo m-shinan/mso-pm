@@ -1,7 +1,8 @@
 // Tenant isolation and role permissions, enforced by the database.
 // Every assertion runs through the public API as a real signed-in user.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { admin, anon, cleanup, makeUser, ok, RUN, sha256, token, type TestUser } from "./helpers";
+import { PERMISSIONS } from "@/lib/permissions";
+import { admin, anon, cleanup, makeUser, ok, ran, RUN, sha256, token, type TestUser } from "./helpers";
 
 let owner: TestUser; // owner of org A
 let ownerB: TestUser; // owner of org B
@@ -28,7 +29,7 @@ async function roleId(orgId: string, key: string) {
 }
 
 async function addMember(orgId: string, user: TestUser, role: string) {
-  ok(await admin.from("organization_members").insert({ organization_id: orgId, user_id: user.id, role_id: await roleId(orgId, role) }), "add member");
+  ran(await admin.from("organization_members").insert({ organization_id: orgId, user_id: user.id, role_id: await roleId(orgId, role) }), "add member");
 }
 
 async function newProject(client: TestUser, orgKey: "A" | "B", key: string, name: string) {
@@ -78,7 +79,7 @@ beforeAll(async () => {
   project.P2 = await newProject(owner, "A", "PTWO", "Project Two");
   project.B1 = await newProject(ownerB, "B", "BONE", "B Project");
 
-  ok(await owner.client.from("project_members").insert([
+  ran(await owner.client.from("project_members").insert([
     { project_id: project.P1, organization_id: org.A, user_id: dev.id },
     { project_id: project.P1, organization_id: org.A, user_id: viewer.id },
     { project_id: project.P1, organization_id: org.A, user_id: both.id },
@@ -96,6 +97,11 @@ describe("organization creation", () => {
     expect(Object.keys(opt.A)).toContain("task_status:Backlog");
     expect(Object.keys(opt.A)).toContain("issue_severity:Critical");
     expect(Object.keys(opt.A)).toContain("project_type:Digital menu");
+  });
+
+  it("seeds the same permission keys the app knows about", async () => {
+    const perms = ok(await owner.client.rpc("my_permissions", { p_org: org.A }), "perms") as string[];
+    expect([...perms].sort()).toEqual([...PERMISSIONS].sort());
   });
 
   it("refuses anonymous callers", async () => {
@@ -215,7 +221,7 @@ describe("roles", () => {
 
   it("a project-level role overrides the organization role", async () => {
     // Make the viewer a developer on P1 only.
-    ok(await owner.client.from("project_members").update({ role_id: await roleId(org.A, "developer") })
+    ran(await owner.client.from("project_members").update({ role_id: await roleId(org.A, "developer") })
       .eq("project_id", project.P1).eq("user_id", viewer.id), "override");
     ok(await newTask(viewer, "A", project.P1, "now allowed"), "viewer create after override");
   });
@@ -247,7 +253,7 @@ describe("owners", () => {
 describe("invitations", () => {
   it("only the invited email can accept, once", async () => {
     const t = token();
-    ok(await owner.client.from("invitations").insert({
+    ran(await owner.client.from("invitations").insert({
       organization_id: org.A, email: invitee.email, role_id: await roleId(org.A, "developer"), token_hash: sha256(t), invited_by: owner.id,
     }), "invite");
 
@@ -267,11 +273,11 @@ describe("invitations", () => {
     const inv = ok(await owner.client.from("invitations").insert({
       organization_id: org.A, email: outsider.email, role_id: await roleId(org.A, "viewer"), token_hash: sha256(t1), invited_by: owner.id,
     }).select("id").single(), "invite");
-    ok(await owner.client.from("invitations").update({ status: "revoked" }).eq("id", inv.id), "revoke");
+    ran(await owner.client.from("invitations").update({ status: "revoked" }).eq("id", inv.id), "revoke");
     expect((await outsider.client.rpc("accept_invitation", { p_token: t1 })).error).not.toBeNull();
 
     const t2 = token();
-    ok(await admin.from("invitations").insert({
+    ran(await admin.from("invitations").insert({
       organization_id: org.A, email: outsider.email, role_id: await roleId(org.A, "viewer"), token_hash: sha256(t2),
       invited_by: owner.id, expires_at: new Date(Date.now() - 1000).toISOString(),
     }), "expired invite");
@@ -294,7 +300,7 @@ describe("invitations", () => {
 describe("activity and notifications", () => {
   it("records status changes and notifies the new assignee", async () => {
     const t = ok(await newTask(owner, "A", project.P1, "assign me"), "task");
-    ok(await owner.client.from("tasks").update({ assignee_id: dev.id, status_id: opt.A["task_status:In progress"] }).eq("id", t.id), "update");
+    ran(await owner.client.from("tasks").update({ assignee_id: dev.id, status_id: opt.A["task_status:In progress"] }).eq("id", t.id), "update");
     const act = ok(await owner.client.from("activity").select("action, changes").eq("entity_id", t.id).order("id"), "activity");
     expect(act.map((a) => a.action)).toEqual(["created", "updated"]);
     expect((act[1].changes as Record<string, unknown>).status).toEqual(["Todo", "In progress"]);

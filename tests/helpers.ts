@@ -51,8 +51,14 @@ export function token() {
   return randomBytes(24).toString("base64url");
 }
 
-/** Throw with context if a Supabase call errored. */
-export function ok<T>(res: { data: T; error: { message: string } | null }, what: string): T {
+/** For writes that return nothing: throw with context if the call errored. */
+export function ran(res: { error: { message: string } | null }, what: string): void {
   if (res.error) throw new Error(`${what}: ${res.error.message}`);
-  return res.data;
+}
+
+/** Throw with context if a Supabase call errored or returned nothing. */
+export function ok<T>(res: { data: T; error: { message: string } | null }, what: string): NonNullable<T> {
+  if (res.error) throw new Error(`${what}: ${res.error.message}`);
+  if (res.data === null || res.data === undefined) throw new Error(`${what}: no data`);
+  return res.data as NonNullable<T>;
 }

@@ -1,7 +1,7 @@
-# mso-pm — architecture plan
+# mso-pm — architecture
 
-Status: **proposal**. Frontend (design system, shell, screens on sample data) is being
-built now. The database schema below is not applied yet — review it first.
+Status: **built**. Schema, RLS, auth and every screen are live against Supabase
+project `aaxeehcqqduuvxxtwzrl`. See §8 for what is intentionally not built yet.
 
 Design reference: https://claude.ai/artifact/Mmb594PjtmzfUSUxtsnMNA
 
@@ -9,19 +9,28 @@ Design reference: https://claude.ai/artifact/Mmb594PjtmzfUSUxtsnMNA
 
 | Layer | Choice | Why |
 |---|---|---|
-| App | Next.js (App Router) + TypeScript | Server Components render first paint with no client fetch; deploys to Vercel as-is |
+| App | Next.js 16 (App Router, `proxy.ts`) + TypeScript | Server Components render first paint with no client fetch; deploys to Vercel as-is |
 | Styling | Tailwind CSS v4, tokens in `globals.css` | Design tokens live in one place; no runtime CSS-in-JS |
-| UI primitives | Radix (dialog, dropdown, popover, tabs, tooltip) + own styling | Accessible focus traps and keyboard handling without a component kit's look |
+| UI primitives | Radix (dialog, dropdown menu, popover) + own styling | Accessible focus traps and keyboard handling without a component kit's look |
 | Icons | lucide-react | Tree-shaken; matches the stroke style in the design |
-| Data | Supabase (Postgres + Auth + Storage), `@supabase/ssr` | RLS is the security boundary |
-| Client cache | TanStack Query | Fetch once, reuse, optimistic updates, targeted invalidation |
-| Validation | Zod, shared by forms and server actions | One schema per entity |
-| Drag and drop | dnd-kit (board only, lazy-loaded) | Small, accessible |
+| Data | Supabase (Postgres + Auth), `@supabase/ssr` 0.12, publishable key | RLS is the security boundary |
+| Validation | Zod 4 in server actions; the same rules as DB `check` constraints | Bad input is refused twice |
+| Tests | Vitest: unit tests + real-database RLS tests | Tenant isolation is proven, not assumed |
 
-**Request path.** Reads and simple writes go browser → Supabase directly (PostgREST,
-RLS enforced). No Vercel function sits in the middle, which saves invocations and a hop.
-Server Components do the first render of each page. Server actions are used only where
-a service key or multi-step transaction is needed (invitations, org creation).
+**Request path.** Server Components do each page's first render with the user's
+session (RLS applies). Writes go browser → Supabase directly (RLS enforced) — no
+Vercel function in the middle. After a write the page calls `router.refresh()`
+to re-render only the current route's server data. Status changes are
+optimistic with rollback and Undo.
+
+**No client cache library.** TanStack Query was planned but not needed: org
+configuration loads once per navigation in the org layout (React `cache()`
+de-duplicates it within a request) and is handed to a client context, so pickers
+never refetch it. Add a cache library only if a screen needs live client-side
+refetching.
+
+Server actions are used where the server must do something the browser
+shouldn't: sign in/up/out, generating invitation tokens, search.
 
 **Supabase region:** `ap-south-1` (Mumbai), project ref `aaxeehcqqduuvxxtwzrl`.
 Pin Vercel functions to `bom1` so server renders sit next to the database.
@@ -170,17 +179,38 @@ Tasks/issues soft-delete (`deleted_at`). Hard delete is a deliberate owner-only 
 - Attachments load metadata only; files open through short-lived signed URLs.
   Images resized before upload; avatars stored at 128 px.
 
-## 8. Phases
+## 8. What is built, and what is not yet
 
-1. Frontend: design tokens, shell, screens on sample data  ← **in progress**
-2. Schema + RLS + auth (login, signup, reset, onboarding, org creation with defaults)
-3. Projects, clients, members, invitations
-4. Tasks: list, board with drag and drop, detail drawer, checklist, labels, dependencies
-5. Issues
-6. Milestones, releases, calendar
-7. Comments, activity, notifications
-8. Search, filters, dashboard summary function
-9. Mobile pass + performance
-10. RLS audit, isolation tests, docs
+Built and tested: auth (sign up with email confirmation, sign in, reset, change
+password, sign out), organizations (create with agency/minimal defaults, switch,
+settings, archive/restore), invitations (hashed one-time links, email-bound,
+7-day expiry, revoke), roles and per-project role overrides, projects (create,
+edit, members, pin, archive), board and list with optimistic status changes,
+task drawer (edit, assign, checklist, comments, delete), issues (report, drawer,
+status, comments), releases (create, mark released with drafted changelog),
+clients, documents (with a secret-paste warning), calendar, activity log,
+in-app notifications, global search, dashboard summary RPC, configurable options
+(add, rename, recolour, reorder, default, archive, delete-if-unused).
 
-After each phase: typecheck, lint, RLS tests, check at phone width.
+Deliberately not built yet:
+- **Drag and drop** on the board (status changes work from each card's status button).
+- **Attachments / Storage** (the `attachments` table exists; needs a private bucket,
+  storage RLS by `{org}/{project}/…` path, signed URLs, client-side image resizing).
+- **Milestone and label management UI** (tables and seeds exist; labels show on cards).
+- **Task dependencies UI** (table exists).
+- **Email delivery** for invitations/notifications (needs custom SMTP; invite links are
+  shown to copy instead).
+- **Custom roles editor** (roles are data; the matrix is read-only for now).
+- **Realtime** (not needed yet; notifications load with each page).
+
+## 9. Maintenance notes
+
+- Migrations: `supabase/migrations`, applied with `npm run db:push`.
+- DB types: `src/lib/database.types.ts`, generated from the Management API
+  (`GET /v1/projects/{ref}/types/typescript?included_schemas=public`) because
+  `supabase gen types --db-url` needs Docker.
+- Advisors: `npx supabase db advisors --db-url "$SUPABASE_DB_URL"` — no security
+  findings at the time of writing; "unused index" notes are expected until there is data.
+- RLS lesson: a `STABLE` helper that reads the same table sees the statement's
+  snapshot, so `INSERT … RETURNING` fails if the SELECT policy looks the new row up
+  through that helper. Check the row's own columns instead (see `projects_select_fix`).

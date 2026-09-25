@@ -1,27 +1,50 @@
 import "server-only";
-import { dataset } from "@/mock/store";
-import { OPTIONS } from "@/mock/data";
+import { createClient } from "@/lib/supabase/server";
+import type { Option, Release } from "@/lib/types";
 
-export async function listReleases(orgId: string, projectId?: string) {
-  const { releases, projects, tasks, issues } = dataset(orgId);
-  const doneIds = new Set(OPTIONS.filter((o) => o.category === "completed").map((o) => o.id));
-  const rows = releases
-    .filter((r) => !projectId || r.projectId === projectId)
-    .map((r) => {
-      const project = projects.find((p) => p.id === r.projectId)!;
-      const items = tasks.filter((t) => t.releaseId === r.id);
-      return {
-        ...r,
-        projectName: project.name,
-        projectKey: project.key,
-        released: OPTIONS.find((o) => o.id === r.statusId)?.category === "released",
-        // In the database these counts come from one aggregate query, not raw rows.
-        tasksDone: items.filter((t) => doneIds.has(t.statusId)).length,
-        tasksTotal: items.length,
-        openIssues: issues.filter((i) => i.releaseId === r.id).length,
-      };
-    });
-  const upcoming = rows.filter((r) => !r.released).sort((a, b) => (a.releaseDate ?? "9").localeCompare(b.releaseDate ?? "9"));
+type Changelog = Release["changelog"];
+
+export async function listReleases(orgId: string, options: Option[], projectId?: string) {
+  const supabase = await createClient();
+  let q = supabase
+    .from("releases")
+    .select("id, project_id, version, name, status_id, release_date, released_at, changelog, project:projects(key, name)")
+    .eq("organization_id", orgId);
+  if (projectId) q = q.eq("project_id", projectId);
+  const { data, error } = await q.order("release_date", { ascending: true, nullsFirst: false }).limit(100);
+  if (error) throw error;
+  const releases = data ?? [];
+  const ids = releases.map((r) => r.id);
+
+  // Counts per release: two narrow queries (release_id + status only), no task bodies.
+  const [tasks, issues] = ids.length
+    ? await Promise.all([
+        supabase.from("tasks").select("release_id, status_id").in("release_id", ids),
+        supabase.from("issues").select("release_id, status_id").in("release_id", ids),
+      ])
+    : [{ data: [] }, { data: [] }];
+  const cat = new Map(options.map((o) => [o.id, o.category]));
+
+  const rows = releases.map((r) => {
+    const items = (tasks.data ?? []).filter((t) => t.release_id === r.id);
+    const cl = (r.changelog ?? {}) as Partial<Changelog>;
+    return {
+      id: r.id,
+      projectId: r.project_id,
+      version: r.version,
+      name: r.name,
+      statusId: r.status_id,
+      releaseDate: r.release_date,
+      changelog: { added: cl.added ?? [], changed: cl.changed ?? [], fixed: cl.fixed ?? [] },
+      projectName: r.project?.name ?? "",
+      projectKey: r.project?.key ?? "",
+      released: cat.get(r.status_id) === "released",
+      tasksDone: items.filter((t) => cat.get(t.status_id) === "completed").length,
+      tasksTotal: items.length,
+      openIssues: (issues.data ?? []).filter((i) => i.release_id === r.id && ["open", "active"].includes(cat.get(i.status_id) ?? "")).length,
+    };
+  });
+  const upcoming = rows.filter((r) => !r.released);
   const released = rows.filter((r) => r.released).sort((a, b) => (b.releaseDate ?? "").localeCompare(a.releaseDate ?? ""));
   return [...upcoming, ...released];
 }

@@ -1,5 +1,6 @@
 import { PageHeader, PageTitle } from "@/components/shell/page-header";
 import { ClientDrawer, ClientList } from "@/features/clients/components";
+import { NewClientButton } from "@/features/clients/form";
 import { listClients } from "@/features/misc/queries";
 import { requireOrg } from "@/features/org/queries";
 
@@ -12,12 +13,14 @@ export default async function ClientsPage({ params, searchParams }: PageProps<"/
   const selected = clients.find((c) => c.id === sp.client) ?? null;
   return (
     <>
-      <PageHeader orgName={org.name} crumbs={[{ label: "Clients" }]} />
+      <PageHeader orgName={org.name} crumbs={[{ label: "Clients" }]} actions={<NewClientButton />} />
       <main className="flex flex-col gap-4 px-4 py-5 lg:px-8 lg:py-6">
-        <PageTitle title="Clients" eyebrow={`${clients.length} in ${org.name}`} />
+        <PageTitle title="Clients" eyebrow={`${clients.length} in ${org.name}`}>
+          <span className="lg:hidden"><NewClientButton /></span>
+        </PageTitle>
         <ClientList clients={clients} selectedId={selected?.id ?? null} />
       </main>
-      <ClientDrawer client={selected} />
+      <ClientDrawer key={selected?.id} client={selected} />
     </>
   );
 }

@@ -13,7 +13,10 @@ export type StatusGlyph =
 
 export interface OrgConfig {
   byId: Map<string, Option>;
+  /** Active options of a kind, in order — what pickers and board columns show. */
   ofKind: (kind: OptionKind) => Option[];
+  /** Including archived ones — for settings and for labelling old records. */
+  allOfKind: (kind: OptionKind) => Option[];
   get: (id: string | null | undefined) => Option | undefined;
   glyph: (statusId: string) => StatusGlyph;
 }
@@ -24,11 +27,12 @@ export function buildConfig(options: Option[]): OrgConfig {
   for (const o of [...options].sort((a, b) => a.sortOrder - b.sortOrder)) {
     kinds.set(o.kind, [...(kinds.get(o.kind) ?? []), o]);
   }
-  const ofKind = (kind: OptionKind) => kinds.get(kind) ?? [];
+  const allOfKind = (kind: OptionKind) => kinds.get(kind) ?? [];
+  const ofKind = (kind: OptionKind) => allOfKind(kind).filter((o) => o.isActive);
 
   const glyphs = new Map<string, StatusGlyph>();
   for (const kind of ["task_status", "issue_status"] as const) {
-    const list = ofKind(kind);
+    const list = allOfKind(kind);
     const active = list.filter((o) => o.category === "active");
     const notStarted = list.filter((o) => o.category === "not_started" || o.category === "open");
     for (const o of list) {
@@ -45,6 +49,7 @@ export function buildConfig(options: Option[]): OrgConfig {
   return {
     byId,
     ofKind,
+    allOfKind,
     get: (id) => (id ? byId.get(id) : undefined),
     glyph: (id) => glyphs.get(id) ?? { shape: "empty", dashed: false },
   };

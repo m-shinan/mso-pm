@@ -6,28 +6,41 @@ import { useOrg } from "@/components/shell/org-provider";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/ui/menu";
 import { useToast } from "@/components/ui/toast";
+import { friendlyError } from "@/lib/errors";
 import { useIsDesktop } from "@/lib/use-media";
 import type { OptionKind } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { StatusIcon } from "./markers";
 
+type Persist = (statusId: string) => PromiseLike<{ error: unknown }>;
+
 /**
- * Local, optimistic status for one row. Phase 4 swaps the body of `set` for a
- * TanStack Query mutation that updates only this task in the cache and rolls
- * back on error — the call sites stay the same.
+ * Optimistic status: the UI changes at once, the write goes to Supabase, and
+ * a failure rolls back with a readable message. Undo writes the old value back.
  */
-export function useOptimisticStatus(initial: string, label: string) {
+export function useOptimisticStatus(initial: string, label: string, persist: Persist) {
   const [statusId, setStatusId] = useState(initial);
   const { config } = useOrg();
   const toast = useToast();
-  function set(next: string) {
-    if (next === statusId) return;
-    const prev = statusId;
+
+  async function write(next: string, prev: string, announce: boolean) {
     setStatusId(next);
-    toast({
-      message: <>{label} moved to {config.get(next)?.name}</>,
-      action: { label: "Undo", onClick: () => setStatusId(prev) },
-    });
+    const { error } = await persist(next);
+    if (error) {
+      setStatusId(prev);
+      toast({ message: friendlyError(error, `move ${label}`) });
+      return;
+    }
+    if (announce) {
+      toast({
+        message: <>{label} moved to {config.get(next)?.name}</>,
+        action: { label: "Undo", onClick: () => void write(prev, next, false) },
+      });
+    }
+  }
+
+  function set(next: string) {
+    if (next !== statusId) void write(next, statusId, true);
   }
   return [statusId, set] as const;
 }
@@ -58,7 +71,7 @@ export function StatusPicker({
   const icon = <StatusIcon status={status} glyph={config.glyph(value)} size={iconSize} />;
   const editable = can(kind === "issue_status" ? "issues.update" : "tasks.update");
 
-  if (!editable) return <span className={cn("inline-flex", className)}>{icon}</span>;
+  if (!editable) return <span className={cn("inline-flex items-center justify-center", className)}>{icon}</span>;
 
   const trigger = cn("inline-flex shrink-0 items-center justify-center rounded-md hover:bg-subtle", className);
   const ariaLabel = `Change status of ${label}, currently ${status?.name}`;

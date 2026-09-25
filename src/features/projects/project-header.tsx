@@ -1,10 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { MoreHorizontal } from "lucide-react";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm";
+import { friendlyError } from "@/lib/errors";
+import { supabaseBrowser } from "@/lib/supabase/client";
+import { EditProjectDialog, ProjectMembersDialog } from "./forms";
+import type { ProjectDetail } from "./queries";
 import { useToast } from "@/components/ui/toast";
 import { useOrg } from "@/components/shell/org-provider";
 import { AvatarStack } from "@/components/ui/avatar";
@@ -13,12 +18,36 @@ import { Progress } from "@/components/ui/progress";
 import { PriorityIcon, StatusPill } from "@/components/domain/markers";
 import { daysFromToday, formatDate, percent } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { Client, Project } from "@/lib/types";
 
-export function ProjectHeader({ project }: { project: Project & { client: Client | null } }) {
-  const { config, member, can, href } = useOrg();
+export function ProjectHeader({ project }: { project: ProjectDetail }) {
+  const { org, config, member, can, href, currentUserId } = useOrg();
   const toast = useToast();
+  const router = useRouter();
   const [archiveOpen, setArchiveOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [membersOpen, setMembersOpen] = useState(false);
+
+  async function archive() {
+    const { error } = await supabaseBrowser()
+      .from("projects")
+      .update({ archived_at: new Date().toISOString() })
+      .eq("id", project.id)
+      .select("id")
+      .single();
+    if (error) return toast({ message: friendlyError(error, "archive the project") });
+    toast({ message: `${project.name} archived` });
+    router.replace(href("/projects"));
+    router.refresh();
+  }
+
+  async function togglePin() {
+    const db = supabaseBrowser().from("project_pins");
+    const { error } = project.pinned
+      ? await db.delete().eq("project_id", project.id).eq("user_id", currentUserId)
+      : await db.insert({ project_id: project.id, organization_id: org.id, user_id: currentUserId });
+    if (error) return toast({ message: friendlyError(error, "update your pins") });
+    router.refresh();
+  }
   const pct = percent(project.tasksDone, project.tasksTotal);
   const left = project.dueDate ? daysFromToday(project.dueDate) : null;
 
@@ -36,34 +65,44 @@ export function ProjectHeader({ project }: { project: Project & { client: Client
           </div>
           <p className="text-sm text-ink-3 max-lg:line-clamp-2">{project.description}</p>
         </div>
-        {can("projects.update") ? (
-          <div className="flex shrink-0 gap-2">
-            <Menu>
-              <MenuTrigger aria-label="More actions" className="inline-flex size-8 items-center justify-center rounded-md border border-line bg-surface hover:bg-sunken max-lg:size-11">
-                <MoreHorizontal aria-hidden className="size-4 text-ink-2" />
-              </MenuTrigger>
-              <MenuContent align="end" label="Project actions">
-                <MenuItem onSelect={() => { navigator.clipboard?.writeText(window.location.href); toast({ message: "Link copied" }); }}>Copy link</MenuItem>
-                {can("projects.delete") ? (
-                  <>
-                    <MenuSeparator />
-                    <MenuItem destructive onSelect={() => setArchiveOpen(true)}>Archive project…</MenuItem>
-                  </>
-                ) : null}
-              </MenuContent>
-            </Menu>
-            <ConfirmDialog
-              open={archiveOpen}
-              onOpenChange={setArchiveOpen}
-              title={`Archive “${project.name}”?`}
-              actionLabel="Archive project"
-              confirmText={project.key}
-              onConfirm={() => toast({ message: "Archive is not connected yet · sample data" })}
-            >
-              <p>Its {project.tasksTotal} tasks, issues and documents become read-only and leave the active lists. Nothing is deleted, and you can restore it later.</p>
-            </ConfirmDialog>
-          </div>
-        ) : null}
+        <div className="flex shrink-0 gap-2">
+          {can("projects.update") ? (
+            <Button onClick={() => setEditOpen(true)} className="max-lg:hidden">Edit project</Button>
+          ) : null}
+          <Menu>
+            <MenuTrigger aria-label="More actions" className="inline-flex size-8 items-center justify-center rounded-md border border-line bg-surface hover:bg-sunken max-lg:size-11">
+              <MoreHorizontal aria-hidden className="size-4 text-ink-2" />
+            </MenuTrigger>
+            <MenuContent align="end" label="Project actions">
+              {can("projects.update") ? (
+                <>
+                  <MenuItem onSelect={() => setEditOpen(true)}>Edit project</MenuItem>
+                  <MenuItem onSelect={() => setMembersOpen(true)}>People on this project</MenuItem>
+                </>
+              ) : null}
+              <MenuItem onSelect={togglePin}>{project.pinned ? "Unpin from sidebar" : "Pin to sidebar"}</MenuItem>
+              <MenuItem onSelect={() => { navigator.clipboard?.writeText(window.location.href); toast({ message: "Link copied" }); }}>Copy link</MenuItem>
+              {can("projects.delete") ? (
+                <>
+                  <MenuSeparator />
+                  <MenuItem destructive onSelect={() => setArchiveOpen(true)}>Archive project…</MenuItem>
+                </>
+              ) : null}
+            </MenuContent>
+          </Menu>
+          <ConfirmDialog
+            open={archiveOpen}
+            onOpenChange={setArchiveOpen}
+            title={`Archive “${project.name}”?`}
+            actionLabel="Archive project"
+            confirmText={project.key}
+            onConfirm={archive}
+          >
+            <p>It leaves the project lists, dashboard and search for everyone. Its {project.tasksTotal} tasks, issues and documents are kept, not deleted.</p>
+          </ConfirmDialog>
+          <EditProjectDialog project={project} open={editOpen} onOpenChange={setEditOpen} />
+          <ProjectMembersDialog project={project} open={membersOpen} onOpenChange={setMembersOpen} />
+        </div>
       </div>
 
       <dl className="flex flex-wrap gap-x-8 gap-y-3 text-sm">

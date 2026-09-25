@@ -1,10 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { ChevronLeft, Tag as TagIcon } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { ChevronLeft, Plus, Tag as TagIcon } from "lucide-react";
+import { useState, type FormEvent } from "react";
 import { useOrg } from "@/components/shell/org-provider";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Field, Input, Select } from "@/components/ui/input";
+import { useToast } from "@/components/ui/toast";
+import { friendlyError } from "@/lib/errors";
+import { createRelease, markReleased } from "./mutations";
 import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/ui/states";
 import { StatusPill } from "@/components/domain/markers";
@@ -15,12 +22,104 @@ import { cn } from "@/lib/utils";
 import type { TaskRow } from "@/features/tasks/queries";
 import type { ReleaseRow } from "./queries";
 
+function MarkReleasedButton({ release, tasks }: { release: ReleaseRow; tasks: TaskRow[] }) {
+  const { config } = useOrg();
+  const router = useRouter();
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const releasedStatus = config.ofKind("release_status").find((o) => o.category === "released");
+  const done = tasks.filter((t) => config.get(t.statusId)?.category === "completed");
+  const hasChangelog = release.changelog.added.length + release.changelog.changed.length + release.changelog.fixed.length > 0;
+
+  async function confirm() {
+    if (!releasedStatus) return toast({ message: "Add a release status that counts as “Released” in Settings first." });
+    const changelog = hasChangelog ? release.changelog : { added: done.map((t) => t.title), changed: [], fixed: [] };
+    const { error } = await markReleased(release.id, releasedStatus.id, changelog);
+    if (error) return toast({ message: friendlyError(error, "mark the release") });
+    toast({ message: `${release.version} marked released` });
+    router.refresh();
+  }
+
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>Mark released</Button>
+      <ConfirmDialog open={open} onOpenChange={setOpen} title={`Release ${release.version}?`} actionLabel="Mark released" onConfirm={confirm}>
+        <p>
+          {done.length} of {tasks.length} tasks are done
+          {release.openIssues ? <>, and <span className="font-medium text-danger-ink">{release.openIssues} linked issue{release.openIssues === 1 ? " is" : "s are"} still open</span></> : null}.
+          {hasChangelog ? " The changelog stays as written." : " The changelog is drafted from the completed tasks; you can edit it after."}
+        </p>
+      </ConfirmDialog>
+    </>
+  );
+}
+
+export function NewReleaseButton({ projectId }: { projectId?: string }) {
+  const { org, config, projects, can } = useOrg();
+  const router = useRouter();
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string>();
+  if (!can("releases.manage") || projects.length === 0) return null;
+  const statuses = config.ofKind("release_status");
+
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const d = new FormData(e.currentTarget);
+    const version = String(d.get("version") ?? "").trim();
+    if (!/^v?\d+(\.\d+){0,2}([-+][0-9A-Za-z.]+)?$/.test(version)) return setError("Use a version like v1.2.0.");
+    const { data, error: dbError } = await createRelease({
+      organizationId: org.id,
+      projectId: String(d.get("project")),
+      version,
+      name: String(d.get("name") ?? ""),
+      statusId: statuses.find((o) => o.isDefault)?.id ?? statuses[0].id,
+      releaseDate: String(d.get("date") ?? "") || null,
+    });
+    if (dbError || !data) return setError(friendlyError(dbError, "create the release"));
+    setOpen(false);
+    toast({ message: `${version} created` });
+    router.push(`?release=${data.id}`);
+    router.refresh();
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); setError(undefined); }}>
+      <Button variant="primary" onClick={() => setOpen(true)} className="max-lg:h-11">
+        <Plus aria-hidden className="size-[15px]" strokeWidth={2} />New release
+      </Button>
+      <DialogContent
+        title="New release"
+        footer={
+          <>
+            <Button onClick={() => setOpen(false)} className="max-lg:h-11">Cancel</Button>
+            <Button variant="primary" type="submit" form="new-release" className="max-lg:h-11">Create release</Button>
+          </>
+        }
+      >
+        <form id="new-release" onSubmit={submit} noValidate className="grid grid-cols-2 gap-3">
+          <Field label="Project" className="col-span-2">
+            {(p) => (
+              <Select {...p} name="project" defaultValue={projectId ?? projects[0]?.id}>
+                {projects.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+              </Select>
+            )}
+          </Field>
+          <Field label="Version" error={error}>{(p) => <Input {...p} name="version" placeholder="v1.0.0" autoFocus onChange={() => setError(undefined)} />}</Field>
+          <Field label="Target date">{(p) => <Input {...p} name="date" type="date" />}</Field>
+          <Field label="Name" hint="Optional, e.g. “Payments & delivery”" className="col-span-2">{(p) => <Input {...p} name="name" maxLength={80} />}</Field>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function ReleasesView({ releases, selected, tasks }: { releases: ReleaseRow[]; selected: ReleaseRow | null; tasks: TaskRow[] }) {
   const { config, can, org } = useOrg();
   const pathname = usePathname();
   if (releases.length === 0) {
     return (
-      <EmptyState icon={TagIcon} title="No releases yet">
+      <EmptyState icon={TagIcon} title="No releases yet" action={<NewReleaseButton />}>
         Group tasks and fixes into versions like v1.0.0 to track what ships when. {org.name} has none so far.
       </EmptyState>
     );
@@ -78,7 +177,7 @@ export function ReleasesView({ releases, selected, tasks }: { releases: ReleaseR
               <StatusPill option={config.get(selected.statusId)} />
               <span className="grow" />
               {can("releases.manage") && !selected.released ? (
-                <Button disabled={selected.openIssues > 0} title={selected.openIssues ? "Resolve blocking issues first" : undefined}>Mark released</Button>
+                <MarkReleasedButton release={selected} tasks={tasks} />
               ) : null}
             </div>
             <dl className="flex flex-wrap gap-x-8 gap-y-2 text-sm">

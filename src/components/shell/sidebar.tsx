@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Search } from "lucide-react";
-import { Avatar } from "@/components/ui/avatar";
+import { AccountMenu } from "./account-menu";
 import { Count, Kbd } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { isActive, PRIMARY_NAV, SETTINGS_NAV, WORKSPACE_NAV, type NavItem } from "./nav";
@@ -41,8 +41,7 @@ function NavLink({ item, count, extra }: { item: NavItem; count?: number; extra?
 }
 
 export function Sidebar({ counts }: { counts: NavCounts }) {
-  const { projects, href, member, currentUserId } = useOrg();
-  const me = member(currentUserId);
+  const { projects, href } = useOrg();
   const pinned = projects.filter((p) => p.pinned);
 
   return (
@@ -91,12 +90,8 @@ export function Sidebar({ counts }: { counts: NavCounts }) {
       <div className="px-3 py-2">
         <NavLink item={SETTINGS_NAV} />
       </div>
-      <div className="flex items-center gap-2.5 border-t border-line px-3.5 py-2.5">
-        <Avatar person={me} size="md" />
-        <span className="flex flex-col leading-tight">
-          <span className="text-sm font-medium">{me?.name}</span>
-          <span className="text-2xs text-ink-4">Account &amp; profile</span>
-        </span>
+      <div className="border-t border-line px-1.5 py-1.5">
+        <AccountMenu />
       </div>
     </aside>
   );

@@ -1,6 +1,5 @@
 import "server-only";
-import { dataset } from "@/mock/store";
-import { OPTIONS } from "@/mock/data";
+import { createClient } from "@/lib/supabase/server";
 
 export type CalendarKind = "task" | "deadline" | "milestone" | "release";
 
@@ -15,35 +14,25 @@ export interface CalendarEvent {
   href: string;
 }
 
-/**
- * Dated items in [from, to]. In Supabase: one RPC unioning the four sources,
- * filtered by date range in SQL, returning these few columns.
- */
+/** Dated items in [from, to], unioned and filtered by date in SQL (calendar_items RPC). */
 export async function listCalendar(orgId: string, orgSlug: string, from: string, to: string): Promise<CalendarEvent[]> {
-  const { tasks, projects, milestones, releases } = dataset(orgId);
-  const today = new Date().toISOString().slice(0, 10);
-  const inRange = (d: string | null): d is string => !!d && d >= from && d <= to;
-  const project = (id: string) => projects.find((p) => p.id === id)!;
-  const done = (statusId: string) => OPTIONS.find((o) => o.id === statusId)?.category === "completed";
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("calendar_items", { p_org: orgId, p_from: from, p_to: to });
+  if (error) throw error;
+  const today = new Date();
+  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const base = `/${orgSlug}`;
-
-  return [
-    ...tasks.filter((t) => inRange(t.dueDate)).map<CalendarEvent>((t) => ({
-      id: t.id, date: t.dueDate!, kind: "task", label: `${project(t.projectId).key}-${t.number} ${t.title}`,
-      sub: project(t.projectId).name, late: !done(t.statusId) && t.dueDate! < today, statusId: t.statusId,
-      href: `${base}/projects/${project(t.projectId).key.toLowerCase()}`,
-    })),
-    ...projects.filter((p) => inRange(p.dueDate)).map<CalendarEvent>((p) => ({
-      id: p.id, date: p.dueDate!, kind: "deadline", label: p.name, sub: "Project deadline", late: false, statusId: null,
-      href: `${base}/projects/${p.key.toLowerCase()}`,
-    })),
-    ...milestones.filter((m) => inRange(m.dueDate)).map<CalendarEvent>((m) => ({
-      id: m.id, date: m.dueDate, kind: "milestone", label: `${project(m.projectId).key} · ${m.name}`, sub: "Milestone", late: false, statusId: null,
-      href: `${base}/projects/${project(m.projectId).key.toLowerCase()}`,
-    })),
-    ...releases.filter((r) => inRange(r.releaseDate)).map<CalendarEvent>((r) => ({
-      id: r.id, date: r.releaseDate!, kind: "release", label: `${project(r.projectId).key} ${r.version}`, sub: "Release", late: false, statusId: null,
-      href: `${base}/releases?release=${r.id}`,
-    })),
-  ].sort((a, b) => a.date.localeCompare(b.date));
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    date: r.day,
+    kind: r.kind as CalendarKind,
+    label: r.label,
+    sub: r.sub,
+    late: r.kind === "task" && !r.done && r.day < todayIso,
+    statusId: r.status_id,
+    href:
+      r.kind === "release"
+        ? `${base}/releases?release=${r.id}`
+        : `${base}/projects/${r.project_key.toLowerCase()}`,
+  }));
 }

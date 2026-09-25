@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useSyncExternalStore, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/input";
-import { useToast } from "@/components/ui/toast";
+import { ErrorState } from "@/components/ui/states";
+import { friendlyError } from "@/lib/errors";
+import { supabaseBrowser } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 const TEMPLATES = [
@@ -21,53 +24,92 @@ const TEMPLATES = [
   { id: "minimal", title: "Minimal", note: null, rows: [["", "Todo, In progress, Done. Add your own types and workflow later."]] },
 ] as const;
 
-export function CreateOrgForm() {
-  const toast = useToast();
+export const TIMEZONES = ["Asia/Dubai", "Asia/Kolkata", "Asia/Riyadh", "Asia/Qatar", "Asia/Kuwait", "Asia/Bahrain", "Asia/Muscat", "Europe/London", "UTC"];
+
+const noSubscribe = () => () => {};
+
+function slugify(s: string) {
+  return s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+}
+
+export function CreateOrgForm({ first }: { first?: boolean }) {
+  const router = useRouter();
   const [template, setTemplate] = useState<string>("agency");
   const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [slugTouched, setSlugTouched] = useState(false);
   const [error, setError] = useState<string>();
+  const [nameError, setNameError] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  // The browser's timezone (server render assumes UTC), unless the user picks one.
+  const detectedTz = useSyncExternalStore(noSubscribe, () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC", () => "UTC");
+  const [pickedTz, setTz] = useState<string | null>(null);
+  const tz = pickedTz ?? detectedTz;
+  const effectiveSlug = slugTouched ? slug : slugify(name);
 
-  function submit(e: FormEvent) {
+  async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!name.trim()) {
-      setError("Give the organization a name.");
-      return;
+    const d = new FormData(e.currentTarget);
+    if (!name.trim()) return setNameError("Give the organization a name.");
+    if (!/^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/.test(effectiveSlug)) return setError("The URL can use lowercase letters, numbers and dashes.");
+    setBusy(true);
+    const { data, error: dbError } = await supabaseBrowser().rpc("create_organization", {
+      p_name: name.trim(),
+      p_slug: effectiveSlug,
+      p_template: template,
+      p_timezone: String(d.get("timezone")),
+      p_week_start: Number(d.get("week")),
+    });
+    if (dbError || !data) {
+      setBusy(false);
+      return setError(friendlyError(dbError, "create the organization"));
     }
-    // Phase 2: a server action creates the org, makes you owner and seeds the chosen defaults in one transaction.
-    toast({ message: `“${name.trim()}” would be created here · not connected yet` });
+    router.replace(`/${data.slug}`);
+    router.refresh();
   }
 
   return (
     <form onSubmit={submit} noValidate className="mt-2 flex w-full max-w-[600px] flex-col rounded-xl border border-line bg-surface">
       <div className="flex flex-col gap-1.5 px-5 pt-6 lg:px-7">
-        <h1 className="text-2xl font-semibold tracking-[-0.01em]">Create an organization</h1>
+        <h1 className="text-2xl font-semibold tracking-[-0.01em]">{first ? "Create your first organization" : "Create an organization"}</h1>
         <p className="text-base leading-normal text-ink-3">
           A separate space with its own projects, clients, team and settings. You’ll be the owner, and you keep the same login.
         </p>
       </div>
       <div className="flex flex-col gap-5 px-5 py-6 lg:px-7">
+        {error ? <ErrorState message={error} /> : null}
         <div className="flex items-end gap-4">
           <span aria-hidden className="inline-flex size-14 shrink-0 items-center justify-center rounded-xl bg-[#2F6B5E] text-[22px] font-semibold text-white">
             {name.trim()[0]?.toUpperCase() ?? "?"}
           </span>
-          <Field label="Organization name" error={error} className="grow">
-            {(p) => <Input {...p} value={name} onChange={(e) => { setName(e.target.value); setError(undefined); }} placeholder="e.g. Northfield Studio" autoFocus />}
+          <Field label="Organization name" error={nameError} className="grow">
+            {(p) => <Input {...p} value={name} maxLength={80} onChange={(e) => { setName(e.target.value); setNameError(undefined); }} placeholder="e.g. Northfield Studio" autoFocus />}
           </Field>
         </div>
+        <Field label="URL" hint={`Your pages will live at /${effectiveSlug || "…"}`}>
+          {(p) => (
+            <Input
+              {...p}
+              value={effectiveSlug}
+              maxLength={40}
+              onChange={(e) => { setSlugTouched(true); setSlug(e.target.value.toLowerCase()); setError(undefined); }}
+            />
+          )}
+        </Field>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Timezone">
+          <Field label="Timezone" hint="Decides what “today” and “overdue” mean.">
             {(p) => (
-              <Select {...p} defaultValue="Asia/Dubai">
-                {["Asia/Dubai", "Asia/Kolkata", "Asia/Riyadh", "Europe/London", "UTC"].map((tz) => <option key={tz}>{tz}</option>)}
+              <Select {...p} name="timezone" value={tz} onChange={(e) => setTz(e.target.value)}>
+                {[...new Set([tz, ...TIMEZONES])].map((z) => <option key={z}>{z}</option>)}
               </Select>
             )}
           </Field>
           <Field label="Week starts on">
             {(p) => (
-              <Select {...p} defaultValue="monday">
-                <option value="monday">Monday</option>
-                <option value="sunday">Sunday</option>
-                <option value="saturday">Saturday</option>
+              <Select {...p} name="week" defaultValue="1">
+                <option value="1">Monday</option>
+                <option value="0">Sunday</option>
+                <option value="6">Saturday</option>
               </Select>
             )}
           </Field>
@@ -97,7 +139,7 @@ export function CreateOrgForm() {
         </fieldset>
       </div>
       <div className="flex justify-end gap-2 border-t border-line-soft px-5 py-4 lg:px-7 max-lg:[&>*]:flex-1">
-        <Button variant="primary" type="submit" className="max-lg:h-11">Create organization</Button>
+        <Button variant="primary" type="submit" disabled={busy} className="max-lg:h-11">{busy ? "Creating…" : "Create organization"}</Button>
       </div>
     </form>
   );

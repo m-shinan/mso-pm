@@ -32,7 +32,8 @@ export function DialogContent({
     <D.Portal>
       <D.Overlay className="animate-fade fixed inset-0 z-40 bg-[rgb(24_24_28/0.34)]" />
       <D.Content
-        role={role}
+        // Only override Radix's role="dialog" when asked; passing undefined would remove it.
+        {...(role ? { role } : {})}
         className={cn(
           "fixed z-50 flex flex-col bg-surface outline-none",
           // phone: bottom sheet

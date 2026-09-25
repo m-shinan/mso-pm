@@ -21,8 +21,8 @@ export function Section({
   const headingId = id ?? (typeof title === "string" ? title.toLowerCase().replace(/\W+/g, "-") : undefined);
   return (
     <section aria-labelledby={headingId} className={cn("min-w-0 overflow-hidden rounded-lg border border-line bg-surface max-lg:rounded-[10px]", className)}>
-      <div className="flex h-11 items-center justify-between gap-3 pr-3 pl-4">
-        <h2 id={headingId} className="flex items-center gap-2 text-md font-semibold max-lg:text-lg">
+      <div className="flex min-h-11 flex-wrap items-center justify-between gap-x-3 gap-y-1 py-1.5 pr-3 pl-4">
+        <h2 id={headingId} className="flex items-center gap-2 text-md font-semibold whitespace-nowrap max-lg:text-lg">
           {title}
           {count !== undefined ? <Count>{count}</Count> : null}
         </h2>

@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckSquare, Plus } from "lucide-react";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useOrg } from "@/components/shell/org-provider";
 import { openCreate } from "@/components/shell/quick-create";
@@ -10,7 +11,9 @@ import { Select } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { PriorityIcon, StatusIcon } from "@/components/domain/markers";
 import { StatusPicker } from "@/components/domain/status-picker";
+import { friendlyError } from "@/lib/errors";
 import { dueLabel } from "@/lib/format";
+import { setTaskStatus } from "./mutations";
 import { cn } from "@/lib/utils";
 import type { TaskRow } from "./queries";
 
@@ -55,22 +58,41 @@ export function TaskBoard({ tasks: initial, projectId }: { tasks: TaskRow[]; pro
   const { config, member, can } = useOrg();
   const toast = useToast();
   const [tasks, setTasks] = useState(initial);
+  // Take fresh server data after router.refresh() (e.g. a task was created).
+  const [seen, setSeen] = useState(initial);
+  if (seen !== initial) {
+    setSeen(initial);
+    setTasks(initial);
+  }
   const f = useTaskFilters(tasks);
-  const statuses = config.ofKind("task_status");
+  // Active statuses, plus any archived status that still has tasks on this board.
+  const statuses = config
+    .allOfKind("task_status")
+    .filter((s) => s.isActive || tasks.some((t) => t.statusId === s.id));
   const notStarted = statuses.filter((s) => s.category === "not_started");
   // Backlog-like and completed columns start folded to keep the active work in view.
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const folded = (id: string) =>
     !expanded.has(id) && ((notStarted.length > 1 && notStarted[0].id === id) || config.get(id)?.category === "completed");
 
-  function move(task: TaskRow, statusId: string) {
+  const setLocal = (id: string, statusId: string) => setTasks((all) => all.map((t) => (t.id === id ? { ...t, statusId } : t)));
+
+  async function move(task: TaskRow, statusId: string, announce = true) {
     if (task.statusId === statusId) return;
     const prev = task.statusId;
-    setTasks((all) => all.map((t) => (t.id === task.id ? { ...t, statusId } : t)));
-    toast({
-      message: <>{task.key} moved to {config.get(statusId)?.name}</>,
-      action: { label: "Undo", onClick: () => setTasks((all) => all.map((t) => (t.id === task.id ? { ...t, statusId: prev } : t))) },
-    });
+    setLocal(task.id, statusId);
+    const { error } = await setTaskStatus(task.id, statusId);
+    if (error) {
+      setLocal(task.id, prev);
+      toast({ message: friendlyError(error, `move ${task.key}`) });
+      return;
+    }
+    if (announce) {
+      toast({
+        message: <>{task.key} moved to {config.get(statusId)?.name}</>,
+        action: { label: "Undo", onClick: () => void move({ ...task, statusId }, prev, false) },
+      });
+    }
   }
 
   return (
@@ -125,7 +147,11 @@ export function TaskBoard({ tasks: initial, projectId }: { tasks: TaskRow[]; pro
                         <span className="font-mono text-2xs text-ink-4">{t.key}</span>
                         <Avatar person={member(t.assigneeId)} size="xs" />
                       </div>
-                      <h3 className="text-sm leading-snug font-medium max-lg:text-md">{t.title}</h3>
+                      <h3 className="text-sm leading-snug font-medium max-lg:text-md">
+                        <Link href={`?task=${t.key.toLowerCase()}`} scroll={false} className="hover:text-accent">
+                          {t.title}
+                        </Link>
+                      </h3>
                       {t.blockedReason ? (
                         <p className="rounded bg-danger-soft px-1.5 py-1 text-xs leading-snug text-danger-ink">{t.blockedReason}</p>
                       ) : null}

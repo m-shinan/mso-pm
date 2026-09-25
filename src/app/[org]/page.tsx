@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { ActivityFeed } from "@/components/domain/activity-feed";
 import { PageHeader, PageTitle } from "@/components/shell/page-header";
 import { NewTaskButton } from "@/components/shell/quick-create";
@@ -7,17 +6,15 @@ import { Section } from "@/components/ui/section";
 import { getDashboard } from "@/features/dashboard/queries";
 import { AttentionList, Deadlines, MyWork, ProjectsTable, StatStrip } from "@/features/dashboard/components";
 import { listActivity } from "@/features/misc/queries";
-import { getOrg, getOrgContext } from "@/features/org/queries";
+import { requireOrg } from "@/features/org/queries";
 import { formatToday } from "@/lib/format";
 
 export const metadata = { title: "Dashboard" };
 
 export default async function DashboardPage({ params }: PageProps<"/[org]">) {
-  const { org: slug } = await params;
-  const org = await getOrg(slug);
-  if (!org) notFound();
-  const { currentUserId } = await getOrgContext(org.id);
-  const [data, activity] = await Promise.all([getDashboard(org.id, currentUserId), listActivity(org.id, { limit: 5 })]);
+  const { org } = await requireOrg(params);
+  // Same cached call as the layout's — one RPC per request.
+  const [data, activity] = await Promise.all([getDashboard(org.id), listActivity(org.id, { limit: 5 })]);
 
   return (
     <>

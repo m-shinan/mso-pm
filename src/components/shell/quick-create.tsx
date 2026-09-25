@@ -1,12 +1,15 @@
 "use client";
 
 import { Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/badge";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
+import { createTask } from "@/features/tasks/mutations";
+import { friendlyError } from "@/lib/errors";
 import { useOrg } from "./org-provider";
 
 const OPEN_EVENT = "mso:open-create";
@@ -32,16 +35,21 @@ export function NewTaskButton({ projectId }: { projectId?: string }) {
 }
 
 export function QuickCreate() {
-  const { config, members, projects, can } = useOrg();
+  const { org, config, members, projects, can, currentUserId, href } = useOrg();
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [projectId, setProjectId] = useState<string>("");
   const [error, setError] = useState<string>();
+  const [saving, setSaving] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     const onOpen = (e: Event) => {
       const detail = (e as CustomEvent<{ projectId?: string }>).detail;
-      setProjectId(detail?.projectId ?? projects[0]?.id ?? "");
+      // Default to the project being viewed, if any.
+      const keyInUrl = window.location.pathname.split("/projects/")[1]?.split("/")[0]?.toUpperCase();
+      const fromUrl = projects.find((p) => p.key === keyInUrl)?.id;
+      setProjectId(detail?.projectId ?? fromUrl ?? projects[0]?.id ?? "");
       setError(undefined);
       setOpen(true);
     };
@@ -65,7 +73,7 @@ export function QuickCreate() {
   const priorities = config.ofKind("task_priority");
   const defaultOf = (list: typeof statuses) => list.find((o) => o.isDefault)?.id ?? list[0]?.id;
 
-  function submit(e: FormEvent<HTMLFormElement>) {
+  async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
     const title = String(data.get("title") ?? "").trim();
@@ -73,9 +81,47 @@ export function QuickCreate() {
       setError("Give the task a title.");
       return;
     }
-    // Phase 4 replaces this with an optimistic insert into the tasks table.
+    if (title.length > 200) {
+      setError("Keep the title under 200 characters.");
+      return;
+    }
+    setSaving(true);
+    const { data: created, error: dbError } = await createTask(
+      {
+        organizationId: org.id,
+        projectId,
+        title,
+        description: String(data.get("description") ?? ""),
+        statusId: String(data.get("status")),
+        priorityId: String(data.get("priority")),
+        assigneeId: String(data.get("assignee") ?? "") || null,
+        dueDate: String(data.get("due") ?? "") || null,
+      },
+      currentUserId,
+    );
+    setSaving(false);
+    if (dbError || !created) {
+      setError(friendlyError(dbError, "create the task"));
+      return;
+    }
     setOpen(false);
-    toast({ message: <>Task “{title}” created · sample data, not saved yet</> });
+    const key = projects.find((p) => p.id === projectId)?.key;
+    toast({ message: <>{key}-{created.number} created</> });
+    router.refresh();
+  }
+
+  if (projects.length === 0) {
+    return (
+      <Dialog open={open} onOpenChange={setOpen}>
+        {can("projects.create") ? (
+          <DialogContent title="New task" description="Tasks live in projects. Create a project first.">
+            <Button variant="primary" onClick={() => { setOpen(false); router.push(href("/projects?new=1")); }} className="max-lg:h-11">New project</Button>
+          </DialogContent>
+        ) : (
+          <DialogContent title="New task" description="You’re not on any projects yet. Ask an admin or project manager to add you to one." />
+        )}
+      </Dialog>
+    );
   }
 
   return (
@@ -85,7 +131,7 @@ export function QuickCreate() {
         footer={
           <>
             <Button onClick={() => setOpen(false)} className="max-lg:h-11">Cancel</Button>
-            <Button variant="primary" type="submit" form="quick-create" className="max-lg:h-11">Create task</Button>
+            <Button variant="primary" type="submit" form="quick-create" disabled={saving} className="max-lg:h-11">{saving ? "Creating…" : "Create task"}</Button>
           </>
         }
       >
@@ -119,7 +165,7 @@ export function QuickCreate() {
               {(p) => (
                 <Select {...p} name="assignee" defaultValue="">
                   <option value="">Unassigned</option>
-                  {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  {members.filter((m) => m.status === "active").map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
                 </Select>
               )}
             </Field>
@@ -127,7 +173,7 @@ export function QuickCreate() {
               {(p) => <Input {...p} name="due" type="date" />}
             </Field>
           </div>
-          <Field label="Description" hint="Optional. Markdown is supported.">
+          <Field label="Description" hint="Optional.">
             {(p) => <Textarea {...p} name="description" rows={3} />}
           </Field>
         </form>

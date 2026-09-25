@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { NotificationBell } from "./notification-bell";
 
 export interface Crumb {
   label: string;
@@ -32,7 +33,10 @@ export function PageHeader({ orgName, crumbs, actions }: { orgName: string; crum
           ))}
         </ol>
       </nav>
-      {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+      <div className="flex items-center gap-2">
+        <NotificationBell />
+        {actions}
+      </div>
     </header>
   );
 }

@@ -14,6 +14,7 @@ import { StatusDot, StatusIcon } from "@/components/domain/markers";
 import { TaskLine, type TaskLineData } from "@/components/domain/task-line";
 import { daysFromToday, formatDate, MONTHS, parseISODate, percent, timeAgo } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { taskHref } from "@/features/tasks/drawer";
 import type { DashboardData } from "./queries";
 
 const TONES = {
@@ -58,14 +59,22 @@ export function StatStrip({ stats }: { stats: DashboardData["stats"] }) {
 }
 
 export function AttentionList({ items }: { items: DashboardData["attention"] }) {
-  const { config, member } = useOrg();
+  const { config, member, org, href } = useOrg();
   return (
     <Section title="Needs attention" count={items.length}>
       {items.length === 0 ? (
         <p className="border-t border-line-soft px-4 py-6 text-center text-sm text-ink-4">Nothing overdue, blocked or critical.</p>
       ) : (
         items.map((r) => (
-          <div key={r.id + r.reason} className="grid grid-cols-[18px_minmax(0,1fr)_auto] items-center gap-3 border-t border-line-soft px-4 py-2.5 lg:grid-cols-[18px_minmax(0,1fr)_auto_22px] lg:py-0 lg:h-[52px]">
+          <Link
+            key={r.id + r.reason}
+            href={
+              r.kind === "task" ? taskHref(org.slug, r.key)
+              : r.kind === "issue" ? href(`/issues?issue=${r.key.toLowerCase()}`)
+              : href(`/projects/${r.key.toLowerCase()}`)
+            }
+            className="grid grid-cols-[18px_minmax(0,1fr)_auto] items-center gap-3 border-t border-line-soft px-4 py-2.5 hover:bg-sunken lg:grid-cols-[18px_minmax(0,1fr)_auto_22px] lg:py-0 lg:h-[52px]"
+          >
             <span className="flex">
               {r.kind === "task" && r.statusId ? <StatusIcon status={config.get(r.statusId)} glyph={config.glyph(r.statusId)} /> : null}
               {r.kind === "issue" ? <Bug aria-label="Issue" className="size-4 text-danger-ink" strokeWidth={1.9} /> : null}
@@ -79,7 +88,7 @@ export function AttentionList({ items }: { items: DashboardData["attention"] }) 
             </span>
             <span className={cn("rounded px-2 py-0.5 text-xs font-medium whitespace-nowrap", TONES[r.tone])}>{r.reason}</span>
             <span className="hidden lg:flex">{r.personId ? <Avatar person={member(r.personId)} /> : null}</span>
-          </div>
+          </Link>
         ))
       )}
     </Section>
@@ -108,7 +117,7 @@ export function MyWork({ work }: { work: DashboardData["myWork"] }) {
               role="tab"
               aria-selected={tab === t.id}
               onClick={() => setTab(t.id)}
-              className={cn("h-7 rounded-[5px] px-2.5 text-sm max-lg:h-9", tab === t.id ? "bg-subtle font-medium text-ink" : "text-ink-3 hover:bg-subtle")}
+              className={cn("h-7 rounded-[5px] px-2.5 text-sm whitespace-nowrap max-lg:h-9", tab === t.id ? "bg-subtle font-medium text-ink" : "text-ink-3 hover:bg-subtle")}
             >
               {t.label} <span className="font-normal text-ink-4 tabular">{t.count}</span>
             </button>

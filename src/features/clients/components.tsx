@@ -3,15 +3,20 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Briefcase } from "lucide-react";
+import { useState } from "react";
 import { useOrg } from "@/components/shell/org-provider";
 import { Button } from "@/components/ui/button";
 import { Dialog, DrawerContent } from "@/components/ui/dialog";
 import { TableHead } from "@/components/ui/section";
 import { EmptyState } from "@/components/ui/states";
+import { useToast } from "@/components/ui/toast";
 import { StatusDot } from "@/components/domain/markers";
+import { friendlyError } from "@/lib/errors";
 import { formatDate, timeAgo } from "@/lib/format";
+import { supabaseBrowser } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import type { ClientRow } from "@/features/misc/queries";
+import { ClientDialog, NewClientButton } from "./form";
 
 const COLS = "lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1.2fr)_100px_110px]";
 
@@ -20,7 +25,7 @@ export function ClientList({ clients, selectedId }: { clients: ClientRow[]; sele
   const pathname = usePathname();
   if (clients.length === 0) {
     return (
-      <EmptyState icon={Briefcase} title="No clients yet">
+      <EmptyState icon={Briefcase} title="No clients yet" action={<NewClientButton />}>
         Add the companies you build for, then link projects to them. Only {org.name} members can see them.
       </EmptyState>
     );
@@ -64,7 +69,22 @@ export function ClientDrawer({ client }: { client: ClientRow | null }) {
   const router = useRouter();
   const pathname = usePathname();
   const { config, can, href } = useOrg();
+  const toast = useToast();
+  const [editOpen, setEditOpen] = useState(false);
   if (!client) return null;
+
+  async function archive() {
+    const { error } = await supabaseBrowser()
+      .from("clients")
+      .update({ archived_at: new Date().toISOString() })
+      .eq("id", client!.id)
+      .select("id")
+      .single();
+    if (error) return toast({ message: friendlyError(error, "archive the client") });
+    toast({ message: `${client!.name} archived. Their projects keep the link.` });
+    router.push(pathname, { scroll: false });
+    router.refresh();
+  }
   return (
     <Dialog open onOpenChange={(open) => !open && router.push(pathname, { scroll: false })}>
       <DrawerContent
@@ -73,7 +93,13 @@ export function ClientDrawer({ client }: { client: ClientRow | null }) {
           <>
             <span className="text-[12.5px] text-ink-3">Client</span>
             <span className="grow" />
-            {can("clients.manage") ? <Button size="sm">Edit</Button> : null}
+            {can("clients.manage") ? (
+              <>
+                <Button size="sm" onClick={() => setEditOpen(true)}>Edit</Button>
+                <Button size="sm" variant="ghost" onClick={archive} className="text-danger-ink">Archive</Button>
+                <ClientDialog client={client} open={editOpen} onOpenChange={setEditOpen} />
+              </>
+            ) : null}
           </>
         }
       >

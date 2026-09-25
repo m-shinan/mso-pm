@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Bug, Folder, LayoutGrid, Menu as MenuIcon, Plus, Search } from "lucide-react";
-import { Avatar } from "@/components/ui/avatar";
 import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/ui/menu";
+import { AccountMenu } from "./account-menu";
+import { NotificationBell } from "./notification-bell";
 import { cn } from "@/lib/utils";
 import { isActive, PRIMARY_NAV, SETTINGS_NAV, WORKSPACE_NAV } from "./nav";
 import { useOrg } from "./org-provider";
@@ -12,19 +13,17 @@ import { OrgSwitcher } from "./org-switcher";
 import { openSearch } from "./command-palette";
 import { openCreate } from "./quick-create";
 
-/** Phone top bar: org switcher, search, account. */
+/** Phone top bar: org switcher, search, notifications, account. */
 export function MobileTopBar() {
-  const { member, currentUserId } = useOrg();
   return (
-    <header className="sticky top-0 z-30 flex h-[60px] items-center gap-1 border-b border-line bg-surface pr-2 pl-3 lg:hidden">
+    <header className="sticky top-0 z-30 flex h-[60px] items-center gap-0.5 border-b border-line bg-surface pr-1.5 pl-3 lg:hidden">
       <OrgSwitcher compact />
       <span className="grow" />
       <button type="button" aria-label="Search" onClick={openSearch} className="inline-flex size-11 items-center justify-center rounded-lg text-ink-2">
         <Search aria-hidden className="size-5" />
       </button>
-      <span className="inline-flex size-11 items-center justify-center">
-        <Avatar person={member(currentUserId)} size="lg" />
-      </span>
+      <NotificationBell />
+      <AccountMenu compact />
     </header>
   );
 }

@@ -34,6 +34,7 @@ export interface Option {
   usage?: number;
 }
 
+/** Built-in role keys. Organizations can add their own, so role keys are plain strings. */
 export type RoleKey = "owner" | "admin" | "project_manager" | "developer" | "viewer";
 
 export interface Organization {
@@ -41,8 +42,11 @@ export interface Organization {
   slug: string;
   name: string;
   logoColor: string;
+  timezone: string;
+  weekStart: number;
   /** The current user's role in this organization. */
-  role: RoleKey;
+  role: string;
+  roleName: string;
   memberCount: number;
 }
 
@@ -51,9 +55,11 @@ export interface Member {
   name: string;
   initials: string;
   email: string | null;
-  role: RoleKey;
-  status: "active" | "invited" | "deactivated";
-  lastActive: string | null;
+  role: string;
+  roleId: string;
+  roleName: string;
+  status: "active" | "deactivated";
+  joinedAt: string;
   /** Avatar tint pair, picked deterministically from the id. */
   tint: { bg: string; fg: string };
 }
