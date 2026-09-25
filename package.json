@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "test": "node --env-file=.env.local node_modules/vitest/vitest.mjs run",
     "db:push": "node --env-file=.env.local -e \"require('child_process').execFileSync('npx',['supabase','db','push','--db-url',process.env.SUPABASE_DB_URL],{stdio:'inherit'})\"",
     "db:sql": "node --env-file=.env.local scripts/sql.mjs",
