@@ -107,6 +107,9 @@ export interface Task {
   checklist: { done: number; total: number } | null;
   blockedReason: string | null;
   releaseId: string | null;
+  milestoneId: string | null;
+  /** Tasks this one waits on (same project). */
+  blockedByIds: string[];
 }
 
 export interface Issue {

@@ -9,7 +9,7 @@ import { OPTION_SECTIONS, OTHER_SECTIONS } from "./sections";
 
 const GROUPS = [
   { title: "Organization", items: OTHER_SECTIONS },
-  { title: "Workflow", items: OPTION_SECTIONS.map((s) => ({ slug: s.slug, label: s.label })) },
+  { title: "Workflow", items: [...OPTION_SECTIONS.map((s) => ({ slug: s.slug, label: s.label })), { slug: "labels", label: "Labels" }] },
 ];
 
 /** Side list on desktop, a single picker on phones. */

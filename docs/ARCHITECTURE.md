@@ -192,16 +192,22 @@ clients, documents (with a secret-paste warning), calendar, activity log,
 in-app notifications, global search, dashboard summary RPC, configurable options
 (add, rename, recolour, reorder, default, archive, delete-if-unused).
 
+Also built: board drag and drop (dnd-kit; mouse, touch press-and-hold, keyboard
+with screen-reader announcements), attachments on tasks and issues (private
+`attachments` bucket, storage RLS by `{org}/{project}/…` path, 60-second signed
+URLs, images shrunk to ≤1600px in the browser, 10 MB cap), milestones tab with
+progress, labels settings and task label chips, task dependencies ("blocked by",
+loops rejected by a trigger), custom roles editor, per-project role overrides
+(guarded so nobody can grant more than they have).
+
 Deliberately not built yet:
-- **Drag and drop** on the board (status changes work from each card's status button).
-- **Attachments / Storage** (the `attachments` table exists; needs a private bucket,
-  storage RLS by `{org}/{project}/…` path, signed URLs, client-side image resizing).
-- **Milestone and label management UI** (tables and seeds exist; labels show on cards).
-- **Task dependencies UI** (table exists).
 - **Email delivery** for invitations/notifications (needs custom SMTP; invite links are
   shown to copy instead).
-- **Custom roles editor** (roles are data; the matrix is read-only for now).
 - **Realtime** (not needed yet; notifications load with each page).
+- **Orphaned-file cleanup for hard-deleted projects/organizations**: deleting a task
+  removes its files first, but a project or organization hard-deleted from SQL leaves
+  its storage folder behind (the UI only archives). Remove `{org}/{project}/` from the
+  bucket when doing that by hand.
 
 ## 9. Maintenance notes
 

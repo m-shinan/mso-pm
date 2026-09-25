@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Bug, FileText, Link2, Plus } from "lucide-react";
+import { Bug, Link2, Plus } from "lucide-react";
+import { Attachments } from "@/components/domain/attachments";
+import type { AttachmentRow } from "@/features/tasks/queries";
 import { useState, type FormEvent } from "react";
 import { useOrg } from "@/components/shell/org-provider";
 import { Avatar } from "@/components/ui/avatar";
@@ -82,7 +84,7 @@ export function IssueList({ issues, showProject = true }: { issues: IssueRow[]; 
   );
 }
 
-export function IssueDrawer({ issue, comments }: { issue: IssueRow | null; comments: CommentRow[] }) {
+export function IssueDrawer({ issue, comments, attachments }: { issue: IssueRow | null; comments: CommentRow[]; attachments: AttachmentRow[] }) {
   const router = useRouter();
   const hrefFor = useIssueHref();
   const { href } = useOrg();
@@ -110,13 +112,13 @@ export function IssueDrawer({ issue, comments }: { issue: IssueRow | null; comme
           </>
         }
       >
-        <IssueDetail key={issue.id} issue={issue} comments={comments} />
+        <IssueDetail key={issue.id} issue={issue} comments={comments} attachments={attachments} />
       </DrawerContent>
     </Dialog>
   );
 }
 
-function IssueDetail({ issue, comments }: { issue: IssueRow; comments: CommentRow[] }) {
+function IssueDetail({ issue, comments, attachments }: { issue: IssueRow; comments: CommentRow[]; attachments: AttachmentRow[] }) {
   const { config, member, org } = useOrg();
   const router = useRouter();
   const [statusId, setStatus] = useOptimisticStatus(issue.statusId, issue.key, async (s) => {
@@ -178,8 +180,8 @@ function IssueDetail({ issue, comments }: { issue: IssueRow; comments: CommentRo
       ) : null}
 
       <section className="flex flex-col gap-2">
-        <h3 className="text-sm font-semibold">Attachments</h3>
-        <p className="flex items-center gap-2 text-sm text-ink-4"><FileText aria-hidden className="size-4" />None yet</p>
+        <h3 className="text-sm font-semibold">Screenshots and files</h3>
+        <Attachments initial={attachments} target={{ projectId: issue.projectId, issueId: issue.id }} />
       </section>
 
       <section className="flex flex-col gap-2.5">

@@ -7,7 +7,7 @@ import { TaskFilterBar, useTaskFilters } from "./board";
 import type { TaskRow } from "./queries";
 
 /** Tasks grouped by status — the fast-scan view of a project. */
-export function TaskList({ tasks }: { tasks: TaskRow[] }) {
+export function TaskList({ tasks, milestones = [] }: { tasks: TaskRow[]; milestones?: { id: string; name: string }[] }) {
   const { config } = useOrg();
   const f = useTaskFilters(tasks);
   const groups = config
@@ -17,7 +17,7 @@ export function TaskList({ tasks }: { tasks: TaskRow[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <TaskFilterBar f={f} />
+      <TaskFilterBar f={f} milestones={milestones} />
       {groups.length === 0 ? <p className="py-8 text-center text-sm text-ink-4">No tasks match these filters.</p> : null}
       {groups.map((g) => (
         <Section key={g.status.id} id={`status-${g.status.id}`} title={g.status.name} count={g.tasks.length}>

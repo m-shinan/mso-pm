@@ -6,11 +6,11 @@ export async function listRoles(orgId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("roles")
-    .select("id, key, name, permissions, is_system")
+    .select("id, key, name, permissions, is_system, members:organization_members(count)")
     .eq("organization_id", orgId)
     .order("created_at");
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []).map(({ members, ...r }) => ({ ...r, members: (members as unknown as { count: number }[])[0]?.count ?? 0 }));
 }
 export type RoleRow = Awaited<ReturnType<typeof listRoles>>[number];
 

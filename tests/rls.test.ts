@@ -317,3 +317,82 @@ describe("activity and notifications", () => {
     expect(res.error).not.toBeNull();
   });
 });
+
+describe("attachments storage", () => {
+  const uploaded: string[] = [];
+  afterAll(async () => {
+    if (uploaded.length) await admin.storage.from("attachments").remove(uploaded);
+  });
+  const file = () => new Blob(["hello"], { type: "text/plain" });
+
+  it("a project member uploads and reads; outsiders and other orgs cannot", async () => {
+    const t = ok(await newTask(owner, "A", project.P1, "has file"), "task");
+    const path = `${org.A}/${project.P1}/task/${t.id}/${RUN}-note.txt`;
+    ran(await dev.client.storage.from("attachments").upload(path, file()), "dev upload");
+    uploaded.push(path);
+    ran(await dev.client.from("attachments").insert({
+      organization_id: org.A, project_id: project.P1, task_id: t.id, storage_path: path, name: "note.txt", size_bytes: 5, mime_type: "text/plain", uploaded_by: dev.id,
+    }), "metadata");
+
+    expect((await dev.client.storage.from("attachments").createSignedUrl(path, 60)).error).toBeNull();
+    expect((await viewer.client.storage.from("attachments").createSignedUrl(path, 60)).error).toBeNull(); // viewer is on P1
+    expect((await outsider.client.storage.from("attachments").createSignedUrl(path, 60)).error).not.toBeNull();
+    expect((await ownerB.client.storage.from("attachments").createSignedUrl(path, 60)).error).not.toBeNull();
+  });
+
+  it("uploads into another org's folder, or a mismatched org/project path, are refused", async () => {
+    const intoB = await owner.client.storage.from("attachments").upload(`${org.B}/${project.B1}/task/x/${RUN}.txt`, file());
+    expect(intoB.error).not.toBeNull();
+    const mismatched = await ownerB.client.storage.from("attachments").upload(`${org.B}/${project.P1}/task/x/${RUN}.txt`, file());
+    expect(mismatched.error).not.toBeNull();
+    const devOnP2 = await dev.client.storage.from("attachments").upload(`${org.A}/${project.P2}/task/x/${RUN}.txt`, file());
+    expect(devOnP2.error).not.toBeNull();
+  });
+
+  it("metadata can't point outside its own org/project folder", async () => {
+    const t = ok(await newTask(owner, "A", project.P1, "bad path"), "task");
+    const res = await owner.client.from("attachments").insert({
+      organization_id: org.A, project_id: project.P1, task_id: t.id, storage_path: `${org.B}/${project.B1}/x.txt`, name: "x", size_bytes: 1, mime_type: "text/plain", uploaded_by: owner.id,
+    });
+    expect(res.error).not.toBeNull();
+  });
+});
+
+describe("dependencies, project roles, custom roles", () => {
+  it("rejects dependency loops", async () => {
+    const a = ok(await newTask(owner, "A", project.P1, "dep A"), "a");
+    const b = ok(await newTask(owner, "A", project.P1, "dep B"), "b");
+    const c = ok(await newTask(owner, "A", project.P1, "dep C"), "c");
+    const dep = (task: string, by: string) =>
+      owner.client.from("task_dependencies").insert({ task_id: task, blocked_by_id: by, project_id: project.P1, organization_id: org.A });
+    ran(await dep(a.id, b.id), "a<-b");
+    ran(await dep(b.id, c.id), "b<-c");
+    expect((await dep(c.id, a.id)).error).not.toBeNull();
+  });
+
+  it("a project manager can't give anyone a project role stronger than their own", async () => {
+    ran(await admin.from("project_members").insert({ project_id: project.P2, organization_id: org.A, user_id: dev.id }), "dev on P2");
+    const toAdmin = await pm.client.from("project_members").update({ role_id: await roleId(org.A, "admin") })
+      .eq("project_id", project.P2).eq("user_id", dev.id);
+    expect(toAdmin.error).not.toBeNull();
+    const toDeveloper = await pm.client.from("project_members").update({ role_id: await roleId(org.A, "developer") })
+      .eq("project_id", project.P2).eq("user_id", dev.id);
+    expect(toDeveloper.error).toBeNull();
+    const toOwner = await owner.client.from("project_members").update({ role_id: await roleId(org.A, "owner") })
+      .eq("project_id", project.P2).eq("user_id", dev.id);
+    expect(toOwner.error).not.toBeNull();
+  });
+
+  it("owners create custom roles; in-use roles can't be deleted; system roles can't be deleted", async () => {
+    const role = ok(await owner.client.from("roles").insert({
+      organization_id: org.A, key: "qa_tester", name: "QA tester", permissions: ["issues.create", "issues.update"],
+    }).select("id").single(), "custom role");
+    ran(await owner.client.from("organization_members").update({ role_id: role.id }).eq("organization_id", org.A).eq("user_id", viewer.id), "assign");
+    const perms = ok(await viewer.client.rpc("my_permissions", { p_org: org.A }), "perms") as string[];
+    expect(perms.sort()).toEqual(["issues.create", "issues.update"]);
+    expect((await owner.client.from("roles").delete().eq("id", role.id)).error).not.toBeNull(); // in use
+    const sys = ok(await owner.client.from("roles").delete().eq("id", await roleId(org.A, "viewer")).select("id"), "sys");
+    expect(sys).toHaveLength(0);
+    expect((await dev.client.from("roles").insert({ organization_id: org.A, key: "sneaky", name: "x", permissions: [] })).error).not.toBeNull();
+  });
+});

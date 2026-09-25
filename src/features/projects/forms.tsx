@@ -239,6 +239,41 @@ export function ProjectMembersDialog({ project, open, onOpenChange }: { project:
   const toast = useToast();
   const [ids, setIds] = useState(new Set(project.memberIds));
   const [busy, setBusy] = useState<string | null>(null);
+  const [roles, setRoles] = useState<{ id: string; key: string; name: string }[]>([]);
+  const [overrides, setOverrides] = useState(new Map<string, string>());
+
+  // Load roles and current per-project overrides only when the dialog opens.
+  useEffect(() => {
+    if (!open) return;
+    const supabase = supabaseBrowser();
+    void Promise.all([
+      supabase.from("roles").select("id, key, name").eq("organization_id", org.id).order("created_at"),
+      supabase.from("project_members").select("user_id, role_id").eq("project_id", project.id),
+    ]).then(([r, pm]) => {
+      setRoles(r.data ?? []);
+      setOverrides(new Map((pm.data ?? []).filter((x) => x.role_id).map((x) => [x.user_id, x.role_id!])));
+    });
+  }, [open, org.id, project.id]);
+
+  async function setRole(userId: string, roleId: string | null) {
+    const before = overrides;
+    const next = new Map(overrides);
+    if (roleId) next.set(userId, roleId);
+    else next.delete(userId);
+    setOverrides(next);
+    const { error } = await supabaseBrowser()
+      .from("project_members")
+      .update({ role_id: roleId })
+      .eq("project_id", project.id)
+      .eq("user_id", userId)
+      .select("user_id")
+      .single();
+    if (error) {
+      setOverrides(before);
+      return toast({ message: friendlyError(error, "change the project role") });
+    }
+    router.refresh();
+  }
 
   async function toggle(userId: string) {
     setBusy(userId);
@@ -263,12 +298,23 @@ export function ProjectMembersDialog({ project, open, onOpenChange }: { project:
           {members.filter((m) => m.status === "active").map((m) => {
             const seesAll = ["owner", "admin", "project_manager"].includes(m.role);
             return (
-              <li key={m.id} className="flex min-h-12 items-center gap-3 border-t border-line-soft py-2 first:border-t-0">
+              <li key={m.id} className="flex min-h-12 flex-wrap items-center gap-3 border-t border-line-soft py-2 first:border-t-0">
                 <Avatar person={m} size="md" />
-                <span className="flex grow flex-col">
+                <span className="flex min-w-0 grow flex-col">
                   <span className="text-sm font-medium">{m.name}</span>
                   <span className="text-xs text-ink-4">{m.roleName}{seesAll && !ids.has(m.id) ? " · sees all projects" : ""}</span>
                 </span>
+                {ids.has(m.id) && roles.length ? (
+                  <Select
+                    aria-label={`Role on this project for ${m.name}`}
+                    value={overrides.get(m.id) ?? ""}
+                    onChange={(e) => setRole(m.id, e.target.value || null)}
+                    className="h-8 w-44 text-xs max-lg:h-10"
+                  >
+                    <option value="">Org role ({m.roleName})</option>
+                    {roles.filter((r) => r.key !== "owner").map((r) => <option key={r.id} value={r.id}>{r.name} here</option>)}
+                  </Select>
+                ) : null}
                 <Button size="sm" disabled={busy === m.id} onClick={() => toggle(m.id)} className="max-lg:h-10">
                   {ids.has(m.id) ? "Remove" : "Add"}
                 </Button>

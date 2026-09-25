@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PageHeader, PageTitle } from "@/components/shell/page-header";
 import { buttonClass } from "@/components/ui/button";
 import { IssueDrawer, IssueList, ReportIssueButton } from "@/features/issues/components";
-import { getIssue, listComments, listIssues } from "@/features/issues/queries";
+import { getIssue, listComments, listIssueAttachments, listIssues } from "@/features/issues/queries";
 import { requireOrg } from "@/features/org/queries";
 import { cn } from "@/lib/utils";
 
@@ -20,7 +20,7 @@ export default async function IssuesPage({ params, searchParams }: PageProps<"/[
   const state = STATES.find((s) => s.id === sp.state)?.id ?? "open";
   const key = typeof sp.issue === "string" ? sp.issue : null;
   const [issues, selected] = await Promise.all([listIssues(org.id, ctx.options, { state }), key ? getIssue(org.id, key) : null]);
-  const comments = selected ? await listComments({ issueId: selected.id }) : [];
+  const [comments, attachments] = selected ? await Promise.all([listComments({ issueId: selected.id }), listIssueAttachments(selected.id)]) : [[], []];
 
   return (
     <>
@@ -48,7 +48,7 @@ export default async function IssuesPage({ params, searchParams }: PageProps<"/[
         <p className="text-[12.5px] text-ink-4">Sorted by severity, then newest.</p>
         <IssueList issues={issues} />
       </main>
-      <IssueDrawer issue={selected} comments={comments} />
+      <IssueDrawer issue={selected} comments={comments} attachments={attachments} />
     </>
   );
 }

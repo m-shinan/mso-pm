@@ -22,10 +22,12 @@ export function friendlyError(error: unknown, action = "save this"): string {
       return "It’s still in use, so it can’t be removed. Archive it instead.";
     case "23514":
       if (msg.includes("owner")) return "An organization needs at least one owner.";
+      if (msg.includes("loop")) return "That would create a dependency loop.";
       return "Some of the values aren’t valid. Check the form and try again.";
     case "42501":
       if (msg.toLowerCase().includes("owner")) return "Only an owner can do that.";
       if (msg.toLowerCase().includes("email")) return msg;
+      if (msg.includes("permissions you have")) return "You can only give roles with permissions you have yourself.";
       return "You don’t have permission to do that.";
     case "P0002":
       return msg || "Not found.";

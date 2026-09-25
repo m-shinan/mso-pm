@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { IssueDrawer, IssueList, ReportIssueButton } from "@/features/issues/components";
-import { getIssue, listComments, listIssues } from "@/features/issues/queries";
+import { getIssue, listComments, listIssueAttachments, listIssues } from "@/features/issues/queries";
 import { requireOrg } from "@/features/org/queries";
 import { getProjectByKey } from "@/features/projects/queries";
 
@@ -15,12 +15,12 @@ export default async function ProjectIssuesPage({ params, searchParams }: PagePr
     listIssues(org.id, ctx.options, { projectId: project.id, state: "all" }),
     issueKey ? getIssue(org.id, issueKey) : null,
   ]);
-  const comments = selected ? await listComments({ issueId: selected.id }) : [];
+  const [comments, attachments] = selected ? await Promise.all([listComments({ issueId: selected.id }), listIssueAttachments(selected.id)]) : [[], []];
   return (
     <main className="flex flex-col gap-3 px-4 py-4 lg:px-8">
       <div className="flex justify-end"><ReportIssueButton projectId={project.id} /></div>
       <IssueList issues={issues} showProject={false} />
-      <IssueDrawer issue={selected} comments={comments} />
+      <IssueDrawer issue={selected} comments={comments} attachments={attachments} />
     </main>
   );
 }

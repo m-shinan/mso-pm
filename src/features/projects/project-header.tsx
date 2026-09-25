@@ -145,6 +145,7 @@ const TABS = [
   { path: "", label: "Board" },
   { path: "/list", label: "List" },
   { path: "/issues", label: "Issues" },
+  { path: "/milestones", label: "Milestones" },
   { path: "/releases", label: "Releases" },
   { path: "/activity", label: "Activity" },
 ];

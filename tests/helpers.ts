@@ -38,8 +38,12 @@ export async function makeUser(name: string): Promise<TestUser> {
   return { id: data.user.id, email, client };
 }
 
+/** Deleting whole organizations must always work, so failures here fail the run. */
 export async function cleanup(orgIds: string[]) {
-  if (orgIds.length) await admin.from("organizations").delete().in("id", orgIds);
+  if (orgIds.length) {
+    const { error } = await admin.from("organizations").delete().in("id", orgIds);
+    if (error) throw new Error(`cleanup: deleting test organizations failed: ${error.message}`);
+  }
   for (const id of created) await admin.auth.admin.deleteUser(id);
 }
 

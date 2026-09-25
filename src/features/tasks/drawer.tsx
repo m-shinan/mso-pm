@@ -1,7 +1,8 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Link2, Plus, Trash2 } from "lucide-react";
+import { Link2, Plus, Trash2, X } from "lucide-react";
+import { Attachments } from "@/components/domain/attachments";
 import { useState, type FormEvent } from "react";
 import { useOrg } from "@/components/shell/org-provider";
 import { Button } from "@/components/ui/button";
@@ -12,18 +13,25 @@ import { useToast } from "@/components/ui/toast";
 import { Comments } from "@/components/domain/comments";
 import { StatusPicker, useOptimisticStatus } from "@/components/domain/status-picker";
 import { friendlyError } from "@/lib/errors";
+import { supabaseBrowser } from "@/lib/supabase/client";
 import { timeAgo } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { CommentRow } from "@/features/issues/queries";
-import { addChecklistItem, deleteTask, setTaskStatus, toggleChecklistItem, updateTask } from "./mutations";
-import type { TaskDetail } from "./queries";
+import { addChecklistItem, addDependency, deleteTask, removeDependency, setTaskLabel, setTaskStatus, toggleChecklistItem, updateTask } from "./mutations";
+import type { LabelRow, TaskDetail } from "./queries";
 
 /** Href that opens a task's drawer on its project board, from anywhere. */
 export function taskHref(orgSlug: string, taskKey: string) {
   return `/${orgSlug}/projects/${taskKey.split("-")[0].toLowerCase()}?task=${taskKey.toLowerCase()}`;
 }
 
-export function TaskDrawer({ task, comments }: { task: TaskDetail | null; comments: CommentRow[] }) {
+export interface TaskDrawerExtras {
+  labels: LabelRow[];
+  milestones: { id: string; name: string }[];
+  projectTasks: { id: string; key: string; title: string }[];
+}
+
+export function TaskDrawer({ task, comments, extras }: { task: TaskDetail | null; comments: CommentRow[]; extras: TaskDrawerExtras }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -55,13 +63,13 @@ export function TaskDrawer({ task, comments }: { task: TaskDetail | null; commen
           </>
         }
       >
-        <TaskBody key={task.id + task.updated_at} task={task} comments={comments} onDeleted={close} />
+        <TaskBody key={task.id + task.updated_at} task={task} comments={comments} extras={extras} onDeleted={close} />
       </DrawerContent>
     </Dialog>
   );
 }
 
-function TaskBody({ task, comments, onDeleted }: { task: TaskDetail; comments: CommentRow[]; onDeleted: () => void }) {
+function TaskBody({ task, comments, extras, onDeleted }: { task: TaskDetail; comments: CommentRow[]; extras: TaskDrawerExtras; onDeleted: () => void }) {
   const { org, config, members, member, can, currentUserId } = useOrg();
   const router = useRouter();
   const toast = useToast();
@@ -76,7 +84,44 @@ function TaskBody({ task, comments, onDeleted }: { task: TaskDetail; comments: C
   const [checklist, setChecklist] = useState(task.checklist);
   const [newItem, setNewItem] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [labelIds, setLabelIds] = useState(new Set(task.labelIds));
+  const [blockedBy, setBlockedBy] = useState(task.blockedBy);
   const reporter = member(task.reporter_id);
+  const ref = { organizationId: org.id, projectId: task.project_id, taskId: task.id };
+
+  async function toggleLabel(labelId: string) {
+    const on = !labelIds.has(labelId);
+    const next = new Set(labelIds);
+    if (on) next.add(labelId);
+    else next.delete(labelId);
+    setLabelIds(next);
+    const { error } = await setTaskLabel(ref, labelId, on);
+    if (error) {
+      setLabelIds(labelIds);
+      return toast({ message: friendlyError(error, "update labels") });
+    }
+    router.refresh();
+  }
+
+  async function addBlocker(id: string) {
+    if (!id) return;
+    const t = extras.projectTasks.find((x) => x.id === id);
+    const { error } = await addDependency(ref, id);
+    if (error) return toast({ message: friendlyError(error, "add the dependency") });
+    if (t) setBlockedBy((b) => [...b, { id: t.id, key: t.key, title: t.title, number: 0, status_id: "" }]);
+    router.refresh();
+  }
+
+  async function removeBlocker(id: string) {
+    const before = blockedBy;
+    setBlockedBy((b) => b.filter((x) => x.id !== id));
+    const { error } = await removeDependency(task.id, id);
+    if (error) {
+      setBlockedBy(before);
+      return toast({ message: friendlyError(error, "remove the dependency") });
+    }
+    router.refresh();
+  }
 
   async function save(patch: Parameters<typeof updateTask>[1], what: string) {
     const { error } = await updateTask(task.id, patch);
@@ -110,6 +155,10 @@ function TaskBody({ task, comments, onDeleted }: { task: TaskDetail; comments: C
   }
 
   async function remove() {
+    // Remove the files first; the attachment rows go with the task (cascade).
+    if (task.attachments.length) {
+      await supabaseBrowser().storage.from("attachments").remove(task.attachments.map((a) => a.storage_path));
+    }
     const { error } = await deleteTask(task.id);
     if (error) return toast({ message: friendlyError(error, "delete the task") });
     toast({ message: `${task.key} deleted` });
@@ -164,6 +213,19 @@ function TaskBody({ task, comments, onDeleted }: { task: TaskDetail; comments: C
             <Input aria-label="Due date" type="date" defaultValue={task.due_date ?? ""} onChange={(e) => save({ due_date: e.target.value || null }, "due date")} className="h-8 max-lg:h-10" />
           ) : task.due_date ?? "None"}
         </dd>
+        {extras.milestones.length ? (
+          <>
+            <dt className="text-ink-4">Milestone</dt>
+            <dd>
+              {editable ? (
+                <Select aria-label="Milestone" defaultValue={task.milestone_id ?? ""} onChange={(e) => save({ milestone_id: e.target.value || null }, "milestone")} className="h-8 max-lg:h-10">
+                  <option value="">None</option>
+                  {extras.milestones.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </Select>
+              ) : extras.milestones.find((m) => m.id === task.milestone_id)?.name ?? "None"}
+            </dd>
+          </>
+        ) : null}
         {config.get(statusId)?.category === "blocked" || task.blocked_reason ? (
           <>
             <dt className="text-ink-4">Blocked by</dt>
@@ -198,6 +260,70 @@ function TaskBody({ task, comments, onDeleted }: { task: TaskDetail; comments: C
         ) : (
           <p className="text-sm leading-relaxed whitespace-pre-wrap">{task.description || "No description."}</p>
         )}
+      </section>
+
+      {extras.labels.length ? (
+        <section className="flex flex-col gap-2">
+          <h3 className="text-sm font-semibold">Labels</h3>
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Labels">
+            {extras.labels.filter((l) => l.is_active || labelIds.has(l.id)).map((l) => {
+              const on = labelIds.has(l.id);
+              return (
+                <button
+                  key={l.id}
+                  type="button"
+                  aria-pressed={on}
+                  disabled={!editable}
+                  onClick={() => toggleLabel(l.id)}
+                  className={cn(
+                    "flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs max-lg:h-9 max-lg:text-sm",
+                    on ? "border-accent bg-accent-soft font-medium text-accent-hover" : "border-line text-ink-3 hover:bg-sunken",
+                  )}
+                >
+                  <span aria-hidden className="size-2 rounded-full" style={{ background: l.color }} />
+                  {l.name}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+
+      <section className="flex flex-col gap-2">
+        <h3 className="text-sm font-semibold">Blocked by</h3>
+        {blockedBy.length ? (
+          <ul className="flex flex-col gap-1">
+            {blockedBy.map((b) => {
+              const done = config.get(b.status_id)?.category === "completed";
+              return (
+                <li key={b.id} className="flex min-h-9 items-center gap-2 rounded-md px-1 text-sm">
+                  <span className="font-mono text-xs text-ink-4">{b.key}</span>
+                  <span className={cn("grow truncate", done && "text-ink-4 line-through")}>{b.title}</span>
+                  {editable ? (
+                    <button type="button" aria-label={`Remove dependency on ${b.key}`} onClick={() => removeBlocker(b.id)} className="inline-flex size-7 items-center justify-center rounded-md text-ink-4 hover:bg-subtle max-lg:size-10">
+                      <X aria-hidden className="size-3.5" />
+                    </button>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="text-sm text-ink-4">Nothing. This task can start any time.</p>
+        )}
+        {editable ? (
+          <Select aria-label="Add a task this one waits on" value="" onChange={(e) => addBlocker(e.target.value)} className="h-8 max-lg:h-10">
+            <option value="">Add a task this one waits on…</option>
+            {extras.projectTasks
+              .filter((t) => t.id !== task.id && !blockedBy.some((b) => b.id === t.id))
+              .map((t) => <option key={t.id} value={t.id}>{t.key} · {t.title}</option>)}
+          </Select>
+        ) : null}
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h3 className="text-sm font-semibold">Attachments</h3>
+        <Attachments initial={task.attachments} target={{ projectId: task.project_id, taskId: task.id }} />
       </section>
 
       <section className="flex flex-col gap-2">

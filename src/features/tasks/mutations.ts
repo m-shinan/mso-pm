@@ -37,7 +37,24 @@ export async function setTaskStatus(id: string, statusId: string) {
   return supabaseBrowser().from("tasks").update({ status_id: statusId }).eq("id", id).select("id").single();
 }
 
-export async function updateTask(id: string, patch: { title?: string; description?: string; assignee_id?: string | null; priority_id?: string; due_date?: string | null; blocked_reason?: string | null }) {
+export async function setTaskLabel(t: { organizationId: string; projectId: string; taskId: string }, labelId: string, on: boolean) {
+  const db = supabaseBrowser().from("task_labels");
+  return on
+    ? db.insert({ task_id: t.taskId, label_id: labelId, project_id: t.projectId, organization_id: t.organizationId })
+    : db.delete().eq("task_id", t.taskId).eq("label_id", labelId);
+}
+
+export async function addDependency(t: { organizationId: string; projectId: string; taskId: string }, blockedById: string) {
+  return supabaseBrowser()
+    .from("task_dependencies")
+    .insert({ task_id: t.taskId, blocked_by_id: blockedById, project_id: t.projectId, organization_id: t.organizationId });
+}
+
+export async function removeDependency(taskId: string, blockedById: string) {
+  return supabaseBrowser().from("task_dependencies").delete().eq("task_id", taskId).eq("blocked_by_id", blockedById);
+}
+
+export async function updateTask(id: string, patch: { title?: string; description?: string; assignee_id?: string | null; priority_id?: string; due_date?: string | null; blocked_reason?: string | null; milestone_id?: string | null }) {
   return supabaseBrowser().from("tasks").update(patch).eq("id", id).select("id").single();
 }
 

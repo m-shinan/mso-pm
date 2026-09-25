@@ -57,7 +57,13 @@ must(await owner.auth.signInWithPassword({ email: DEMO_EMAIL, password: DEMO_PAS
 
 // ---- Organization (recreated each run) -----------------------------------
 const SLUG = "arclight-demo";
-await admin.from("organizations").delete().eq("slug", SLUG);
+const { data: oldOrg } = await admin.from("organizations").select("id").eq("slug", SLUG).maybeSingle();
+if (oldOrg) {
+  // Remove the old org's files too (attachment rows cascade, storage objects don't).
+  const { data: files } = await admin.from("attachments").select("storage_path").eq("organization_id", oldOrg.id);
+  if (files?.length) await admin.storage.from("attachments").remove(files.map((f) => f.storage_path));
+  await admin.from("organizations").delete().eq("id", oldOrg.id);
+}
 const org = must(await owner.rpc("create_organization", { p_name: "Arclight Dev (demo)", p_slug: SLUG, p_timezone: "Asia/Dubai" }), "create org");
 const O = org.id;
 
@@ -125,7 +131,9 @@ must(await owner.from("milestones").insert([
 ]), "milestones");
 
 // ---- Labels & tasks ------------------------------------------------------
-const labels = must(await owner.from("labels").insert(["Frontend", "Backend", "API", "Payments", "Admin"].map((name) => ({ organization_id: O, name }))).select("id, name"), "labels");
+const labels = must(await owner.from("labels").insert([
+  ["Frontend", "#2D55C8"], ["Backend", "#7654C9"], ["API", "#0E8388"], ["Payments", "#2F8F5B"], ["Admin", "#C27A06"],
+].map(([name, color]) => ({ organization_id: O, name, color }))).select("id, name"), "labels");
 const L = Object.fromEntries(labels.map((l) => [l.name, l.id]));
 
 const tasks = [

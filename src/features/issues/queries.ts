@@ -93,3 +93,15 @@ export async function listComments(target: { issueId?: string; taskId?: string }
 }
 
 export type CommentRow = Awaited<ReturnType<typeof listComments>>[number];
+
+/** File metadata for an issue (the files themselves load on demand via signed URLs). */
+export async function listIssueAttachments(issueId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("attachments")
+    .select("id, name, size_bytes, mime_type, storage_path, uploaded_by, created_at")
+    .eq("issue_id", issueId)
+    .order("created_at");
+  if (error) throw error;
+  return data ?? [];
+}
