@@ -60,7 +60,7 @@ export function IssueList({ issues, showProject = true }: { issues: IssueRow[]; 
             aria-current={on ? "true" : undefined}
             className={cn(
               "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 border-t border-line-soft px-3.5 py-3 first:border-t-0 lg:h-[50px] lg:grid-cols-[70px_60px_minmax(0,1fr)_16px_22px_32px] lg:py-0",
-              on ? "bg-[#F3F6FD]" : "hover:bg-sunken",
+              on ? "bg-selected" : "hover:bg-sunken",
             )}
           >
             <SeverityBadge severity={config.get(i.severityId)} className="w-[70px] max-lg:order-2 max-lg:justify-self-end" />
@@ -159,7 +159,7 @@ function IssueDetail({ issue, comments, attachments }: { issue: IssueRow; commen
       {issue.steps.length ? (
         <section className="flex flex-col gap-2">
           <h3 className="text-sm font-semibold">Steps to reproduce</h3>
-          <ol className="list-decimal pl-5 text-base leading-relaxed text-[#2A2A30]">
+          <ol className="list-decimal pl-5 text-base leading-relaxed text-ink">
             {issue.steps.map((s, i) => <li key={i}>{s}</li>)}
           </ol>
         </section>
@@ -172,7 +172,7 @@ function IssueDetail({ issue, comments, attachments }: { issue: IssueRow; commen
             <h3 className="text-xs font-semibold text-ink-3">Expected</h3>
             <p className="text-sm leading-normal whitespace-pre-line">{issue.expected || "—"}</p>
           </section>
-          <section className="flex flex-col gap-1.5 rounded-lg border border-danger-line bg-[#FEF7F6] px-3 py-2.5">
+          <section className="flex flex-col gap-1.5 rounded-lg border border-danger-line bg-danger-surface px-3 py-2.5">
             <h3 className="text-xs font-semibold text-danger-ink">Actual</h3>
             <p className="text-sm leading-normal whitespace-pre-line">{issue.actual || "—"}</p>
           </section>

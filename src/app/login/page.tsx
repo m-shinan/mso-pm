@@ -11,7 +11,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-4 px-4 py-10">
       {failed ? (
-        <p role="alert" className="max-w-[380px] rounded-lg border border-danger-line bg-[#FEF7F6] px-3 py-2.5 text-sm">
+        <p role="alert" className="max-w-[380px] rounded-lg border border-danger-line bg-danger-surface px-3 py-2.5 text-sm">
           That link has expired or was already used. Sign in, or request a new one.
         </p>
       ) : null}

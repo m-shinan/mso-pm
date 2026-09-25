@@ -1,6 +1,7 @@
 "use client";
 
 import * as M from "@radix-ui/react-dropdown-menu";
+import { Check } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
@@ -44,4 +45,38 @@ export function MenuLabel({ children }: { children: ReactNode }) {
 
 export function MenuSeparator() {
   return <M.Separator className="my-1 h-px bg-line-soft" />;
+}
+
+export const MenuRadioGroup = M.RadioGroup;
+
+export function MenuRadioItem({ children, value }: { children: ReactNode; value: string }) {
+  return (
+    <M.RadioItem
+      value={value}
+      onSelect={(e) => e.preventDefault()}
+      className="flex h-9 cursor-pointer items-center gap-2 rounded-md px-2 text-sm text-ink outline-none select-none data-highlighted:bg-subtle max-lg:h-11 max-lg:text-lg"
+    >
+      {children}
+      <M.ItemIndicator className="ml-auto">
+        <Check aria-hidden className="size-4 text-accent" />
+      </M.ItemIndicator>
+    </M.RadioItem>
+  );
+}
+
+export function MenuCheckboxItem({ children, checked, disabled, onCheckedChange }: { children: ReactNode; checked: boolean; disabled?: boolean; onCheckedChange: (checked: boolean) => void }) {
+  return (
+    <M.CheckboxItem
+      checked={checked}
+      disabled={disabled}
+      onCheckedChange={onCheckedChange}
+      onSelect={(e) => e.preventDefault()}
+      className="flex h-9 cursor-pointer items-center gap-2 rounded-md px-2 text-sm text-ink outline-none select-none data-disabled:opacity-60 data-highlighted:bg-subtle max-lg:h-11 max-lg:text-lg"
+    >
+      {children}
+      <M.ItemIndicator className="ml-auto">
+        <Check aria-hidden className="size-4 text-accent" />
+      </M.ItemIndicator>
+    </M.CheckboxItem>
+  );
 }

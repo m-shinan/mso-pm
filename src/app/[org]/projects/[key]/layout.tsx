@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { LiveRefresh } from "@/components/shell/live-refresh";
 import { PageHeader } from "@/components/shell/page-header";
 import { NewTaskButton } from "@/components/shell/quick-create";
 import { requireOrg } from "@/features/org/queries";
@@ -30,6 +31,10 @@ export default async function ProjectLayout({ children, params }: LayoutProps<"/
         <ProjectTabs base={`/${org.slug}/projects/${project.key.toLowerCase()}`} />
       </div>
       {children}
+      <LiveRefresh
+        channel={`project:${project.id}`}
+        sources={(["tasks", "issues", "comments"] as const).map((table) => ({ table, filter: `project_id=eq.${project.id}` }))}
+      />
     </>
   );
 }

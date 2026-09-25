@@ -27,7 +27,7 @@ export function StatStrip({ stats }: { stats: DashboardData["stats"] }) {
   const { href } = useOrg();
   const items = [
     { label: "Active projects", value: stats.activeProjects, sub: null, dot: "#2D55C8", path: "/projects" },
-    { label: "Due today", value: stats.dueToday, sub: null, dot: "#45454C", path: "/my-tasks" },
+    { label: "Due today", value: stats.dueToday, sub: null, dot: "var(--color-ink-2)", path: "/my-tasks" },
     { label: "Overdue", value: stats.overdue, sub: stats.overdue ? `oldest ${stats.oldestOverdueDays} days` : null, dot: "#D9480F", path: "/my-tasks", subTone: "text-warn-ink" },
     { label: "Open issues", value: stats.openIssues, sub: stats.criticalIssues ? `${stats.criticalIssues} critical` : null, dot: "#CC3A21", path: "/issues", subTone: "text-danger-ink" },
     { label: "Blocked", value: stats.blocked, sub: null, dot: "#CC3A21", path: "/my-tasks" },

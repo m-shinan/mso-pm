@@ -52,13 +52,14 @@ export function StatusIcon({
 export function PriorityIcon({ priority, className }: { priority: Pick<Option, "name" | "color" | "rank"> | undefined; className?: string }) {
   const rank = priority?.rank ?? 0;
   const top = rank >= 4;
-  const on = top ? priority!.color : "#45454C";
-  const fill = (i: number) => (top || rank >= i ? on : "#D6D5D0");
+  // Theme variables so the bars stay visible in dark mode.
+  const on = top ? priority!.color : "var(--color-ink-2)";
+  const fill = (i: number) => ({ fill: top || rank >= i ? on : "var(--color-line-strong)" });
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" role="img" aria-label={`${priority?.name ?? "No"} priority`} className={cn("shrink-0", className)}>
-      <rect x="1.5" y="8" width="2.6" height="4.5" rx="0.8" fill={fill(1)} />
-      <rect x="5.7" y="5" width="2.6" height="7.5" rx="0.8" fill={fill(2)} />
-      <rect x="9.9" y="2" width="2.6" height="10.5" rx="0.8" fill={fill(3)} />
+      <rect x="1.5" y="8" width="2.6" height="4.5" rx="0.8" style={fill(1)} />
+      <rect x="5.7" y="5" width="2.6" height="7.5" rx="0.8" style={fill(2)} />
+      <rect x="9.9" y="2" width="2.6" height="10.5" rx="0.8" style={fill(3)} />
     </svg>
   );
 }

@@ -43,7 +43,7 @@ export function ClientList({ clients, selectedId }: { clients: ClientRow[]; sele
             href={`${pathname}?client=${c.id}`}
             scroll={false}
             aria-current={selectedId === c.id ? "true" : undefined}
-            className={cn("grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-t border-line-soft px-4 py-3 hover:bg-sunken lg:h-14 lg:py-0", COLS, selectedId === c.id && "bg-[#F3F6FD]")}
+            className={cn("grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-t border-line-soft px-4 py-3 hover:bg-sunken lg:h-14 lg:py-0", COLS, selectedId === c.id && "bg-selected")}
           >
             <span className="flex min-w-0 items-center gap-2.5">
               <span aria-hidden className="inline-flex size-[30px] shrink-0 items-center justify-center rounded-[7px] bg-subtle text-xs font-semibold text-ink-2">{c.name[0]}</span>
@@ -137,7 +137,7 @@ export function ClientDrawer({ client }: { client: ClientRow | null }) {
           <section className="flex flex-col gap-2">
             <h3 className="text-sm font-semibold">Notes</h3>
             {client.notes ? (
-              <div className="rounded-lg border border-line px-3.5 py-3 text-sm leading-relaxed whitespace-pre-line text-[#2A2A30]">{client.notes}</div>
+              <div className="rounded-lg border border-line px-3.5 py-3 text-sm leading-relaxed whitespace-pre-line text-ink">{client.notes}</div>
             ) : (
               <p className="text-sm text-ink-4">No notes.</p>
             )}

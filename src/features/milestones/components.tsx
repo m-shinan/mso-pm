@@ -105,7 +105,7 @@ export function MilestonesView({ projectId, projectKey, milestones }: { projectI
             const late = left !== null && left < 0 && pct < 100;
             return (
               <li key={m.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line-soft px-4 py-3 first:border-t-0">
-                <Flag aria-hidden className={cn("size-4 shrink-0", pct === 100 ? "text-[#2F8F5B]" : late ? "text-late" : "text-ink-4")} />
+                <Flag aria-hidden className={cn("size-4 shrink-0", pct === 100 ? "text-success" : late ? "text-late" : "text-ink-4")} />
                 <div className="flex min-w-0 grow flex-col gap-0.5">
                   <span className="font-medium">{m.name}</span>
                   <span className={cn("text-xs", late ? "text-late" : "text-ink-4")}>

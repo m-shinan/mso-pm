@@ -139,7 +139,7 @@ export function DocEditor({
           ) : null}
         </div>
         {doc.body ? (
-          <div className="rounded-lg border border-line bg-surface px-5 py-4 text-base leading-relaxed whitespace-pre-wrap text-[#2A2A30]">{doc.body}</div>
+          <div className="rounded-lg border border-line bg-surface px-5 py-4 text-base leading-relaxed whitespace-pre-wrap text-ink">{doc.body}</div>
         ) : (
           <p className="rounded-lg border border-dashed border-line-strong px-5 py-8 text-center text-sm text-ink-4">This document is empty.</p>
         )}
@@ -163,7 +163,7 @@ export function DocEditor({
         placeholder={"Setup\n1. Clone the repo\n2. Copy .env.example to .env.local\n\nDeploy\n- Vercel project: …"}
       />
       {looksSecret ? (
-        <p role="alert" className="rounded-lg border border-danger-line bg-[#FEF7F6] px-3 py-2 text-sm text-danger-ink">
+        <p role="alert" className="rounded-lg border border-danger-line bg-danger-surface px-3 py-2 text-sm text-danger-ink">
           This looks like it contains a password or key. Remove it and note where the secret is stored instead.
         </p>
       ) : null}

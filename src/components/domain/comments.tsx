@@ -66,7 +66,7 @@ export function Comments({
                   <button type="button" onClick={() => remove(c.id)} className="ml-auto text-xs text-ink-4 hover:text-danger-ink">Delete</button>
                 ) : null}
               </span>
-              <p className="text-sm leading-normal whitespace-pre-line text-[#2A2A30]">{c.body}</p>
+              <p className="text-sm leading-normal whitespace-pre-line text-ink">{c.body}</p>
             </div>
           </div>
         );

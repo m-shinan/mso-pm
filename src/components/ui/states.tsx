@@ -28,7 +28,7 @@ export function EmptyState({
 
 export function ErrorState({ message, action }: { message: string; action?: ReactNode }) {
   return (
-    <div role="alert" className="flex items-center gap-2.5 rounded-lg border border-danger-line bg-[#FEF7F6] px-3 py-2.5">
+    <div role="alert" className="flex items-center gap-2.5 rounded-lg border border-danger-line bg-danger-surface px-3 py-2.5">
       <AlertCircle aria-hidden className="size-4 shrink-0 text-danger-ink" />
       <span className="grow text-sm">{message}</span>
       {action}

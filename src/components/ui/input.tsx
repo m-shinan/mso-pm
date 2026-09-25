@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 const control =
   "w-full rounded-md border border-line-strong bg-surface px-2.5 text-base text-ink placeholder:text-ink-5 " +
   "focus:border-accent focus:outline-none focus:ring-3 focus:ring-accent-ring " +
-  "aria-invalid:border-[#CC3A21] aria-invalid:focus:ring-danger-soft max-lg:text-lg";
+  "aria-invalid:border-danger-border aria-invalid:focus:ring-danger-soft max-lg:text-lg";
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input(
   { className, ...props },

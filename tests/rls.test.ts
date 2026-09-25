@@ -396,3 +396,42 @@ describe("dependencies, project roles, custom roles", () => {
     expect((await dev.client.from("roles").insert({ organization_id: org.A, key: "sneaky", name: "x", permissions: [] })).error).not.toBeNull();
   });
 });
+
+describe("live updates and email preference", () => {
+  function listen(user: TestUser, projectId: string) {
+    const got: string[] = [];
+    const channel = user.client.channel(`test-${user.id}-${projectId}`);
+    const ready = new Promise<void>((resolve, reject) => {
+      channel
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "tasks", filter: `project_id=eq.${projectId}` }, (p) =>
+          got.push((p.new as { title: string }).title),
+        )
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED") resolve();
+          else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") reject(new Error(`realtime: ${status}`));
+        });
+    });
+    return { got, ready, stop: () => user.client.removeChannel(channel) };
+  }
+
+  it("project members receive task changes live; people outside the organization receive nothing", async () => {
+    const member = listen(dev, project.P1);
+    const stranger = listen(ownerB, project.P1);
+    await Promise.all([member.ready, stranger.ready]);
+    // The server attaches the change listener just after acknowledging the subscription.
+    await new Promise((r) => setTimeout(r, 1000));
+    const title = `live ${RUN}`;
+    ran(await newTask(owner, "A", project.P1, title), "task");
+    await expect.poll(() => member.got, { timeout: 10_000 }).toContain(title);
+    await new Promise((r) => setTimeout(r, 2000));
+    expect(stranger.got).toEqual([]);
+    await Promise.all([member.stop(), stranger.stop()]);
+  }, 30_000);
+
+  it("people can switch their own email notifications off, and no one else's", async () => {
+    ran(await dev.client.from("profiles").update({ email_notifications: false }).eq("id", dev.id), "own");
+    expect(ok(await admin.from("profiles").select("email_notifications").eq("id", dev.id).single(), "read").email_notifications).toBe(false);
+    ran(await dev.client.from("profiles").update({ email_notifications: false }).eq("id", pm.id), "other");
+    expect(ok(await admin.from("profiles").select("email_notifications").eq("id", pm.id).single(), "read").email_notifications).toBe(true);
+  });
+});

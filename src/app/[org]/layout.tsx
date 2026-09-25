@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { CommandPalette } from "@/components/shell/command-palette";
+import { LiveRefresh } from "@/components/shell/live-refresh";
 import { MobileBottomNav, MobileTopBar } from "@/components/shell/mobile-nav";
 import { OrgProvider } from "@/components/shell/org-provider";
 import { QuickCreate } from "@/components/shell/quick-create";
@@ -10,7 +11,8 @@ import { getOrg, getOrgContext, listMyOrgs } from "@/features/org/queries";
 import { getUserId } from "@/lib/supabase/server";
 
 export default async function OrgLayout({ children, params }: LayoutProps<"/[org]">) {
-  if (!(await getUserId())) redirect("/login");
+  const userId = await getUserId();
+  if (!userId) redirect("/login");
   const { org: slug } = await params;
   const org = await getOrg(slug);
   // Not a member, removed, or no such org: RLS returns nothing either way.
@@ -46,6 +48,7 @@ export default async function OrgLayout({ children, params }: LayoutProps<"/[org
       <MobileBottomNav />
       <CommandPalette />
       <QuickCreate />
+      <LiveRefresh channel={`inbox:${userId}`} sources={[{ table: "notifications", filter: `user_id=eq.${userId}` }]} />
     </OrgProvider>
   );
 }

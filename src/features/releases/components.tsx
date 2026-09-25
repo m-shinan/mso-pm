@@ -145,7 +145,7 @@ export function ReleasesView({ releases, selected, tasks }: { releases: ReleaseR
                     href={`${pathname}?release=${r.id}`}
                     scroll={false}
                     aria-current={on ? "true" : undefined}
-                    className={cn("grid grid-cols-[74px_minmax(0,1fr)_auto] items-center gap-3 border-t border-line-soft px-3.5 py-2.5 first:border-t-0", on ? "bg-[#F3F6FD]" : "hover:bg-sunken")}
+                    className={cn("grid grid-cols-[74px_minmax(0,1fr)_auto] items-center gap-3 border-t border-line-soft px-3.5 py-2.5 first:border-t-0", on ? "bg-selected" : "hover:bg-sunken")}
                   >
                     <span className="font-mono text-sm font-medium">{r.version}</span>
                     <span className="flex min-w-0 flex-col gap-1">
@@ -204,8 +204,8 @@ export function ReleasesView({ releases, selected, tasks }: { releases: ReleaseR
                 {(["added", "changed", "fixed"] as const).map((k) =>
                   selected.changelog[k].length ? (
                     <div key={k} className="flex flex-col gap-1">
-                      <span className={cn("text-xs font-semibold capitalize", k === "added" ? "text-[#2F6B45]" : k === "changed" ? "text-accent-hover" : "text-warn-ink")}>{k}</span>
-                      <ul className="list-disc pl-[18px] text-[#2A2A30]">{selected.changelog[k].map((line) => <li key={line}>{line}</li>)}</ul>
+                      <span className={cn("text-xs font-semibold capitalize", k === "added" ? "text-success-ink" : k === "changed" ? "text-accent-hover" : "text-warn-ink")}>{k}</span>
+                      <ul className="list-disc pl-[18px] text-ink">{selected.changelog[k].map((line) => <li key={line}>{line}</li>)}</ul>
                     </div>
                   ) : null,
                 )}

@@ -849,6 +849,7 @@ export type Database = {
         Row: {
           avatar_path: string | null
           created_at: string
+          email_notifications: boolean
           email: string
           full_name: string
           id: string
@@ -858,6 +859,7 @@ export type Database = {
         Insert: {
           avatar_path?: string | null
           created_at?: string
+          email_notifications?: boolean
           email: string
           full_name?: string
           id: string
@@ -867,6 +869,7 @@ export type Database = {
         Update: {
           avatar_path?: string | null
           created_at?: string
+          email_notifications?: boolean
           email?: string
           full_name?: string
           id?: string

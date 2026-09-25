@@ -55,10 +55,10 @@ export function buildConfig(options: Option[]): OrgConfig {
   };
 }
 
-/** Soft background + readable ink derived from an option colour. */
+/** Soft background + readable ink derived from an option colour, in either theme. */
 export function tone(color: string) {
   return {
-    background: `color-mix(in srgb, ${color} 13%, white)`,
-    color: `color-mix(in srgb, ${color} 78%, black)`,
+    background: `color-mix(in srgb, ${color} 16%, var(--color-surface))`,
+    color: `color-mix(in srgb, ${color} 70%, var(--color-ink))`,
   };
 }

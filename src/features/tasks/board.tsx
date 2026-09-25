@@ -5,18 +5,21 @@ import {
   DragOverlay,
   KeyboardSensor,
   PointerSensor,
+  pointerWithin,
+  rectIntersection,
   TouchSensor,
   useDraggable,
   useDroppable,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { CheckSquare, Link2, Plus } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useOrg } from "@/components/shell/org-provider";
 import { openCreate } from "@/components/shell/quick-create";
 import { Avatar } from "@/components/ui/avatar";
@@ -31,6 +34,13 @@ import type { Option } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { setTaskStatus } from "./mutations";
 import type { TaskRow } from "./queries";
+
+// Drop into the column under the pointer. Overlap alone favours narrow folded
+// columns next to the target; keyboard drags have no pointer, so fall back to it.
+const collision: CollisionDetection = (args) => {
+  const hits = pointerWithin(args);
+  return hits.length ? hits : rectIntersection(args);
+};
 
 /** Filters shared by board and list. Applied to the already-loaded tasks of one project. */
 export function useTaskFilters(tasks: TaskRow[]) {
@@ -113,6 +123,8 @@ export function TaskBoard({
   }
   const f = useTaskFilters(tasks);
   const [dragging, setDragging] = useState<TaskRow | null>(null);
+  // Stable across server and client; dnd-kit otherwise numbers its a11y ids globally.
+  const dndId = useId();
   const editable = can("tasks.update");
 
   // Active statuses, plus any archived status that still has tasks on this board.
@@ -174,7 +186,9 @@ export function TaskBoard({
         <TaskFilterBar f={f} milestones={milestones} />
       </div>
       <DndContext
+        id={dndId}
         sensors={sensors}
+        collisionDetection={collision}
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
         onDragCancel={() => setDragging(null)}
@@ -243,7 +257,7 @@ function Column({ status, count, projectId, dropDisabled, children }: { status: 
       aria-label={`${status.name}, ${count} tasks`}
       className={cn(
         "flex w-[85vw] max-w-[300px] shrink-0 snap-start flex-col gap-2 rounded-lg p-2 transition-colors lg:w-[220px]",
-        isOver ? "bg-accent-soft ring-2 ring-accent-line" : "bg-[#EFEEEA]",
+        isOver ? "bg-accent-soft ring-2 ring-accent-line" : "bg-column",
       )}
     >
       <div className="flex h-7 items-center gap-2 px-1">

@@ -26,6 +26,21 @@ Vercel domain) or confirmation and reset links won't come back to the app.
 Supabase's built-in email only delivers to members of your Supabase team; add
 custom SMTP before inviting outside users to sign up.
 
+### Email notifications (optional)
+
+Notifications (assigned to you, comments on your work, added to a project) can
+also go out by email through [Resend](https://resend.com) (free tier: 3,000/month).
+
+1. Create a Resend account, add and verify your sending domain, create an API key.
+2. Store the settings in Supabase Vault (the key is read from the environment, not typed as an argument):
+
+   ```bash
+   RESEND_API_KEY=re_... node --env-file=.env.local scripts/email-setup.mjs "mso-pm <notify@yourdomain.com>" https://your-app.vercel.app
+   ```
+
+Nothing is sent until this is done. `scripts/email-setup.mjs --off` turns it off again.
+Each person can switch emails off in the account menu.
+
 ### Demo data (development only)
 
 ```bash
@@ -42,6 +57,8 @@ The seed deletes and recreates the `arclight-demo` organization each run.
 | `npm run dev` / `build` / `start` | Next.js |
 | `npm run typecheck` / `lint` | TypeScript, ESLint |
 | `npm test` | Unit tests + database security tests (real users against the real project, cleaned up after) |
+| `npm run test:e2e` | Browser tests (Playwright; starts the dev server on port 3100). First time: `npx playwright install chromium` |
+| `node --env-file=.env.local scripts/cleanup-tests.mjs` | Remove test data left behind by an interrupted run |
 | `npm run db:push` | Apply new migrations |
 | `npm run db:sql -- -e "select 1"` | Run SQL (dev) |
 | `npm run seed:demo` | Demo organization |
@@ -54,6 +71,15 @@ The seed deletes and recreates the `arclight-demo` organization each run.
    `private.*` helpers.
 3. `npm run db:push`, then `npx supabase db advisors --db-url "$SUPABASE_DB_URL"`.
 4. Regenerate types (Management API, see ARCHITECTURE.md §9) and add tests to `tests/rls.test.ts`.
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every push to `main` and every pull request:
+typecheck, lint, database security tests, then the browser tests against a
+production build. It needs three repository secrets (already set):
+`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+`SUPABASE_SECRET_KEY`. The tests use the live project with throwaway users and
+organizations (`mso-t…`/`mso-e2e…@example.com`) that are deleted afterwards.
 
 ## Deploying to Vercel
 

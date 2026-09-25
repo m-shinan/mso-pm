@@ -117,7 +117,7 @@ export function CreateOrgForm({ first }: { first?: boolean }) {
         <fieldset className="flex flex-col gap-2">
           <legend className="pb-2 text-[12.5px] font-medium">Start with</legend>
           {TEMPLATES.map((t) => (
-            <label key={t.id} className={cn("flex cursor-pointer gap-3 rounded-[10px] p-3.5", template === t.id ? "border-[1.5px] border-accent bg-[#F3F6FD]" : "border border-line")}>
+            <label key={t.id} className={cn("flex cursor-pointer gap-3 rounded-[10px] p-3.5", template === t.id ? "border-[1.5px] border-accent bg-selected" : "border border-line")}>
               <input type="radio" name="template" value={t.id} checked={template === t.id} onChange={() => setTemplate(t.id)} className="mt-0.5 accent-accent" />
               <span className="flex min-w-0 flex-col gap-2">
                 <span className="text-base font-semibold">

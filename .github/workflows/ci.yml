@@ -1,0 +1,51 @@
+# Every push and pull request: typecheck, lint, database security tests and
+# browser tests. The tests run against the live Supabase project with throwaway
+# users and organizations that are deleted afterwards.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# One run at a time, never cancelled midway: a cancelled run would skip the
+# cleanup and leave test data in the live project.
+concurrency:
+  group: live-supabase
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - name: Database security tests
+        run: npx vitest run
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Browser tests
+        run: npx playwright test
+      - name: Leftover test data
+        if: always()
+        run: node scripts/cleanup-tests.mjs
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

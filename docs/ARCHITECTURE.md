@@ -175,7 +175,12 @@ Tasks/issues soft-delete (`deleted_at`). Hard delete is a deliberate owner-only 
 - Org config (all options, labels, my permissions) loads once per org as one RPC and
   is cached; invalidated only when settings change.
 - Search is one `search(org_id, q)` RPC using trigram indexes, top 5 per type, 300 ms debounce.
-- No polling. Realtime only for my notifications, scoped by `user_id`.
+- No polling. Realtime (`postgres_changes`, inserts and updates only) is used in two
+  places: the project pages listen to `tasks`, `issues`, `comments` filtered by
+  `project_id`, and the shell listens to my `notifications` by `user_id`. A change
+  triggers one debounced `router.refresh()`; while the tab is hidden nothing is
+  fetched, and one refresh happens when it's shown again (`components/shell/live-refresh.tsx`).
+  Realtime applies each table's RLS per subscriber, so nobody receives rows they can't read.
 - Attachments load metadata only; files open through short-lived signed URLs.
   Images resized before upload; avatars stored at 128 px.
 
@@ -200,10 +205,27 @@ progress, labels settings and task label chips, task dependencies ("blocked by",
 loops rejected by a trigger), custom roles editor, per-project role overrides
 (guarded so nobody can grant more than they have).
 
+Also built:
+- **Dark mode**: System / Light / Dark in the account menu. The choice is kept in
+  `localStorage` and applied by an inline script in the root layout before first paint
+  (no flash); colours are CSS tokens in `globals.css`, overridden under
+  `html[data-theme="dark"]`. Option colours are mixed with the surface via `tone()`.
+- **Live updates**: see §7.
+- **Email notifications**: every in-app notification is also emailed through Resend.
+  A trigger on `notifications` sends it with `pg_net` (asynchronous, never blocks the
+  change, failures ignored). Off until three Vault secrets exist (`resend_api_key`,
+  `email_from`, `app_url`), set with `scripts/email-setup.mjs`. Each person can turn
+  emails off in the account menu (`profiles.email_notifications`).
+- **Browser tests** (`e2e/`, Playwright) and **CI** (`.github/workflows/ci.yml`): on every
+  push and pull request, typecheck, lint, the database security tests and the browser
+  tests run against the live project with throwaway users and organizations that are
+  deleted afterwards. Runs are serialized and never cancelled midway, so cleanup always runs.
+
 Deliberately not built yet:
-- **Email delivery** for invitations/notifications (needs custom SMTP; invite links are
-  shown to copy instead).
-- **Realtime** (not needed yet; notifications load with each page).
+- **Invitation emails**: invite links are shown to copy and send yourself. (Supabase's own
+  sign-up and password-reset emails need custom SMTP before outside users sign up.)
+- **Live deletes**: Realtime can't filter delete events, so a task deleted by someone else
+  disappears on the next refresh or navigation rather than instantly.
 - **Orphaned-file cleanup for hard-deleted projects/organizations**: deleting a task
   removes its files first, but a project or organization hard-deleted from SQL leaves
   its storage folder behind (the UI only archives). Remove `{org}/{project}/` from the

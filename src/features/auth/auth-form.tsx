@@ -53,7 +53,7 @@ export function AuthForm({
   return (
     <form action={formAction} noValidate className="flex w-full max-w-[380px] flex-col gap-5 rounded-xl border border-line bg-surface p-6">
       <div className="flex flex-col gap-1">
-        <span aria-hidden className="mb-2 inline-flex size-9 items-center justify-center rounded-lg bg-ink text-[15px] font-semibold text-white">m</span>
+        <span aria-hidden className="mb-2 inline-flex size-9 items-center justify-center rounded-lg bg-inverse text-[15px] font-semibold text-on-inverse">m</span>
         <h1 className="text-2xl font-semibold tracking-[-0.01em]">{title}</h1>
         <p className="text-sm text-ink-3">{subtitle}</p>
       </div>

@@ -38,6 +38,15 @@
   --color-warn-soft: #fdf0e3;
   --color-late: #b8400f;
 
+  --color-selected: #f3f6fd;
+  --color-danger-surface: #fef7f6;
+  --color-danger-border: #cc3a21;
+  --color-column: #efeeea;
+  --color-success: #2f8f5b;
+  --color-success-ink: #2f6b45;
+  --color-inverse: #1b1b1f;
+  --color-on-inverse: #ffffff;
+
   --text-2xs: 11.5px;
   --text-xs: 12px;
   --text-sm: 13px;
@@ -55,6 +64,57 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  color-scheme: light;
+}
+
+/* Dark theme. <html data-theme> is set before first paint by the script in
+   the root layout (cookie "theme": system | light | dark). */
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-canvas: #111113;
+  --color-surface: #1a1a1d;
+  --color-sunken: #161618;
+  --color-subtle: #242428;
+  --color-muted: #2b2b30;
+  --color-track: #2e2e33;
+  --color-line: #2e2e33;
+  --color-line-soft: #242428;
+  --color-line-strong: #3d3d43;
+
+  --color-ink: #ececee;
+  --color-ink-2: #c7c7cc;
+  --color-ink-3: #a6a6ad;
+  --color-ink-4: #8d8d95;
+  --color-ink-5: #6f6f77;
+  --color-ink-6: #54545b;
+
+  --color-accent: #5476e6;
+  --color-accent-hover: #86a0f1;
+  --color-accent-soft: #1e2742;
+  --color-accent-line: #34457a;
+  --color-accent-ring: #283766;
+
+  --color-danger: #c83e28;
+  --color-danger-ink: #f2907f;
+  --color-danger-soft: #3b1f1a;
+  --color-danger-line: #5c2b23;
+  --color-warn-ink: #f2a765;
+  --color-warn-soft: #3a2a15;
+  --color-late: #f2945c;
+
+  --color-selected: #1f2640;
+  --color-danger-surface: #2a1714;
+  --color-danger-border: #e0624d;
+  --color-column: #202024;
+  --color-success: #3da56c;
+  --color-success-ink: #6ccb94;
+  --color-inverse: #ececee;
+  --color-on-inverse: #111113;
+
+  --shadow-pop: 0 10px 28px rgb(0 0 0 / 0.5);
+  --shadow-dialog: 0 24px 60px rgb(0 0 0 / 0.6);
+  --shadow-lift: 0 12px 28px rgb(0 0 0 / 0.55);
 }
 
 body {

@@ -11,9 +11,9 @@ import { cn } from "@/lib/utils";
 import type { CalendarEvent, CalendarKind } from "./queries";
 
 const KIND_STYLE: Record<CalendarKind, string> = {
-  task: "text-[#2A2A30]",
-  deadline: "bg-warn-soft font-medium text-[#7E3C08]",
-  milestone: "bg-subtle font-medium text-[#2A2A30]",
+  task: "text-ink",
+  deadline: "bg-warn-soft font-medium text-warn-ink",
+  milestone: "bg-subtle font-medium text-ink",
   release: "bg-accent-soft font-medium text-accent-hover",
 };
 

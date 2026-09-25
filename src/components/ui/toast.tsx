@@ -34,7 +34,7 @@ export function Toaster({ children }: { children: ReactNode }) {
         className="pointer-events-none fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+96px)] z-[60] flex flex-col items-center gap-2 lg:inset-x-auto lg:right-6 lg:bottom-6 lg:items-end"
       >
         {toasts.map((t) => (
-          <div key={t.id} className="animate-pop pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-lg bg-ink py-2.5 pr-3 pl-3.5 text-sm text-white shadow-pop">
+          <div key={t.id} className="animate-pop pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-lg bg-inverse py-2.5 pr-3 pl-3.5 text-sm text-on-inverse shadow-pop">
             <span className="grow">{t.message}</span>
             {t.action ? (
               <button
@@ -43,7 +43,7 @@ export function Toaster({ children }: { children: ReactNode }) {
                   t.action!.onClick();
                   setToasts((all) => all.filter((x) => x.id !== t.id));
                 }}
-                className="h-7 rounded-[5px] bg-white/15 px-2 text-[12.5px] font-medium hover:bg-white/25"
+                className="h-7 rounded-[5px] bg-on-inverse/15 px-2 text-[12.5px] font-medium hover:bg-on-inverse/25"
               >
                 {t.action.label}
               </button>

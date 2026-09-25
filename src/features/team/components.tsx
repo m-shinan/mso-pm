@@ -96,7 +96,7 @@ export function MemberTable({ members, roles }: { members: (Member & { projectNa
               {["owner", "admin", "project_manager"].includes(m.role) ? "All projects" : m.projectNames.join(", ") || "No projects yet"}
             </span>
             <span className="hidden items-center gap-1.5 text-[12.5px] lg:flex">
-              <span aria-hidden className={cn("size-[7px] rounded-full", m.status === "active" ? "bg-[#2F8F5B]" : "bg-ink-6")} />
+              <span aria-hidden className={cn("size-[7px] rounded-full", m.status === "active" ? "bg-success" : "bg-ink-6")} />
               {m.status === "active" ? "Active" : "Deactivated"}
             </span>
             <span className="hidden text-[12.5px] text-ink-4 lg:block">{formatDate(m.joinedAt.slice(0, 10), { year: true })}</span>
@@ -264,7 +264,7 @@ export function InviteButton({ roles }: { roles: RoleRow[] }) {
           <form id="invite" onSubmit={submit} className="flex flex-col gap-4" noValidate>
             <div className="flex flex-col gap-1.5">
               <label htmlFor="invite-email" className="text-[12.5px] font-medium">Email addresses</label>
-              <div className={cn("flex min-h-[38px] flex-wrap items-center gap-1.5 rounded-md border px-2 py-1 focus-within:border-accent focus-within:ring-3 focus-within:ring-accent-ring", error ? "border-[#CC3A21]" : "border-line-strong")}>
+              <div className={cn("flex min-h-[38px] flex-wrap items-center gap-1.5 rounded-md border px-2 py-1 focus-within:border-accent focus-within:ring-3 focus-within:ring-accent-ring", error ? "border-danger-border" : "border-line-strong")}>
                 {emails.map((e) => (
                   <span key={e} className="flex h-6 items-center gap-1 rounded bg-subtle pr-1 pl-2 text-[12.5px]">
                     {e}
@@ -294,7 +294,7 @@ export function InviteButton({ roles }: { roles: RoleRow[] }) {
             <fieldset className="flex flex-col gap-1.5">
               <legend className="pb-1.5 text-[12.5px] font-medium">Role in {org.name}</legend>
               {invitable.map((r) => (
-                <label key={r.id} className={cn("flex cursor-pointer items-start gap-2.5 rounded-lg px-3 py-2.5", roleId === r.id ? "border-[1.5px] border-accent bg-[#F3F6FD]" : "border border-line")}>
+                <label key={r.id} className={cn("flex cursor-pointer items-start gap-2.5 rounded-lg px-3 py-2.5", roleId === r.id ? "border-[1.5px] border-accent bg-selected" : "border border-line")}>
                   <input type="radio" name="role" value={r.id} checked={roleId === r.id} onChange={() => setRoleId(r.id)} className="mt-0.5 accent-accent" />
                   <span className="flex flex-col gap-0.5">
                     <span className="text-sm font-medium">{r.name}</span>
