@@ -3,27 +3,20 @@
 import * as P from "@radix-ui/react-popover";
 import { Bell } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { timeAgo } from "@/lib/format";
-import { supabaseBrowser } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { useLiveNotifications } from "./notification-popups";
 import { useOrg } from "./org-provider";
 
-/** In-app notifications (latest 15, loaded with the page — no polling). */
+/** In-app notifications: the latest 15, kept live by LiveNotificationsProvider. */
 export function NotificationBell({ className }: { className?: string }) {
-  const { notifications, member } = useOrg();
-  const router = useRouter();
-  const [readIds, setReadIds] = useState<Set<number>>(new Set());
-  const unread = notifications.filter((n) => !n.read_at && !readIds.has(n.id));
+  const { member } = useOrg();
+  const { items: notifications, markRead } = useLiveNotifications();
+  const unread = notifications.filter((n) => !n.read_at);
 
-  async function markAllRead() {
-    const ids = unread.map((n) => n.id);
-    if (!ids.length) return;
-    setReadIds(new Set([...readIds, ...ids]));
-    await supabaseBrowser().from("notifications").update({ read_at: new Date().toISOString() }).in("id", ids);
-    router.refresh();
+  function markAllRead() {
+    markRead(unread.map((n) => n.id));
   }
 
   return (
@@ -46,7 +39,7 @@ export function NotificationBell({ className }: { className?: string }) {
           ) : (
             <ul className="max-h-[60vh] overflow-y-auto">
               {notifications.map((n) => {
-                const isUnread = !n.read_at && !readIds.has(n.id);
+                const isUnread = !n.read_at;
                 return (
                   <li key={n.id}>
                     <Link href={n.href || "#"} className={cn("flex gap-2.5 border-b border-line-soft px-4 py-3 last:border-b-0 hover:bg-sunken", isUnread && "bg-accent-soft/50")}>

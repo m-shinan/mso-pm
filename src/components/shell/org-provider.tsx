@@ -5,13 +5,11 @@ import { buildConfig, type OrgConfig } from "@/lib/options";
 import { can, type Permission } from "@/lib/permissions";
 import type { Member, Organization } from "@/lib/types";
 import type { OrgContextData } from "@/features/org/queries";
-import type { NotificationRow } from "@/features/misc/queries";
 
 interface OrgContextValue extends Omit<OrgContextData, "options"> {
   org: Organization;
   orgs: Organization[];
   config: OrgConfig;
-  notifications: NotificationRow[];
   member: (id: string | null | undefined) => Member | undefined;
   can: (p: Permission) => boolean;
   href: (path?: string) => string;
@@ -24,13 +22,11 @@ export function OrgProvider({
   org,
   orgs,
   data,
-  notifications,
   children,
 }: {
   org: Organization;
   orgs: Organization[];
   data: OrgContextData;
-  notifications: NotificationRow[];
   children: ReactNode;
 }) {
   const value = useMemo<OrgContextValue>(() => {
@@ -39,13 +35,12 @@ export function OrgProvider({
       ...data,
       org,
       orgs,
-      notifications,
       config: buildConfig(data.options),
       member: (id) => (id ? byId.get(id) : undefined),
       can: (p) => can(data.permissions, p),
       href: (path = "") => `/${org.slug}${path}`,
     };
-  }, [org, orgs, data, notifications]);
+  }, [org, orgs, data]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

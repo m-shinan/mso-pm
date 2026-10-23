@@ -1,8 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { CommandPalette } from "@/components/shell/command-palette";
-import { LiveRefresh } from "@/components/shell/live-refresh";
 import { MobileBottomNav, MobileTopBar } from "@/components/shell/mobile-nav";
-import { NotificationPopups } from "@/components/shell/notification-popups";
+import { LiveNotificationsProvider } from "@/components/shell/notification-popups";
 import { OrgProvider } from "@/components/shell/org-provider";
 import { QuickCreate } from "@/components/shell/quick-create";
 import { Sidebar } from "@/components/shell/sidebar";
@@ -41,7 +40,8 @@ export default async function OrgLayout({ children, params }: LayoutProps<"/[org
   };
 
   return (
-    <OrgProvider org={org} orgs={orgs} data={data} notifications={notifications}>
+    <OrgProvider org={org} orgs={orgs} data={data}>
+      <LiveNotificationsProvider userId={userId} orgId={org.id} initial={notifications}>
       <div className="flex min-h-dvh">
         <Sidebar counts={counts} />
         <div className="flex min-w-0 grow flex-col pb-[calc(env(safe-area-inset-bottom)+72px)] lg:pb-0">
@@ -52,8 +52,7 @@ export default async function OrgLayout({ children, params }: LayoutProps<"/[org
       <MobileBottomNav />
       <CommandPalette />
       <QuickCreate />
-      <LiveRefresh channel={`inbox:${userId}`} sources={[{ table: "notifications", filter: `user_id=eq.${userId}` }]} />
-      <NotificationPopups userId={userId} />
+      </LiveNotificationsProvider>
     </OrgProvider>
   );
 }

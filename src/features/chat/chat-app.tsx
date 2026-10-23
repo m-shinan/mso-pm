@@ -67,15 +67,17 @@ export function ChatApp({ initialChannels, initialChannelId }: { initialChannels
     }
   }, [org.id]);
 
-  // Marks read on the server, then refreshes so the sidebar's unread badge updates.
+  // Marks read on the server. Only if there was something unread is the page
+  // refreshed (to update the sidebar badge): a refresh re-runs every query on it.
   const markReadRemote = useCallback(
-    (id: string) => void supabaseBrowser().rpc("mark_chat_read", { p_channel: id }).then(() => router.refresh()),
+    (id: string, hadUnread: boolean) =>
+      void supabaseBrowser().rpc("mark_chat_read", { p_channel: id }).then(() => hadUnread && router.refresh()),
     [router],
   );
 
   // The channel opened by the URL counts as read.
   useEffect(() => {
-    if (firstId) markReadRemote(firstId);
+    if (firstId) markReadRemote(firstId, (initialChannels.find((c) => c.id === firstId)?.unread ?? 0) > 0);
     // Once, for the channel the page opened with.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -187,8 +189,9 @@ export function ChatApp({ initialChannels, initialChannelId }: { initialChannels
   function open(id: string) {
     setSelectedId(id);
     setMobileOpen(true);
+    const hadUnread = (channels.find((c) => c.id === id)?.unread ?? 0) > 0;
     setChannels((cs) => cs.map((c) => (c.id === id ? { ...c, unread: 0 } : c)));
-    markReadRemote(id);
+    markReadRemote(id, hadUnread);
   }
 
   const sections: { label: string; items: ChatChannel[] }[] = [
