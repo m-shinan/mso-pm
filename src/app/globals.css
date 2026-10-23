@@ -67,50 +67,51 @@ html {
   color-scheme: light;
 }
 
-/* Dark theme. <html data-theme> is set before first paint by the script in
-   the root layout (cookie "theme": system | light | dark). */
+/* Dark theme: true black with neutral greys (no tint), like Vercel's.
+   <html data-theme> is set before first paint by the script in the root
+   layout (localStorage "theme": system | light | dark). */
 html[data-theme="dark"] {
   color-scheme: dark;
 
-  --color-canvas: #111113;
-  --color-surface: #1a1a1d;
-  --color-sunken: #161618;
-  --color-subtle: #242428;
-  --color-muted: #2b2b30;
-  --color-track: #2e2e33;
-  --color-line: #2e2e33;
-  --color-line-soft: #242428;
-  --color-line-strong: #3d3d43;
+  --color-canvas: #000000;
+  --color-surface: #0a0a0a;
+  --color-sunken: #0a0a0a;
+  --color-subtle: #1a1a1a;
+  --color-muted: #1f1f1f;
+  --color-track: #262626;
+  --color-line: #262626;
+  --color-line-soft: #1a1a1a;
+  --color-line-strong: #333333;
 
-  --color-ink: #ececee;
-  --color-ink-2: #c7c7cc;
-  --color-ink-3: #a6a6ad;
-  --color-ink-4: #8d8d95;
-  --color-ink-5: #6f6f77;
-  --color-ink-6: #54545b;
+  --color-ink: #ededed;
+  --color-ink-2: #c9c9c9;
+  --color-ink-3: #a1a1a1;
+  --color-ink-4: #8f8f8f;
+  --color-ink-5: #777777;
+  --color-ink-6: #4d4d4d;
 
   --color-accent: #5476e6;
   --color-accent-hover: #86a0f1;
-  --color-accent-soft: #1e2742;
-  --color-accent-line: #34457a;
-  --color-accent-ring: #283766;
+  --color-accent-soft: #111a33;
+  --color-accent-line: #2b3d75;
+  --color-accent-ring: #1f2d5c;
 
   --color-danger: #c83e28;
   --color-danger-ink: #f2907f;
-  --color-danger-soft: #3b1f1a;
-  --color-danger-line: #5c2b23;
+  --color-danger-soft: #2a1410;
+  --color-danger-line: #4d231c;
   --color-warn-ink: #f2a765;
-  --color-warn-soft: #3a2a15;
+  --color-warn-soft: #2a1e0e;
   --color-late: #f2945c;
 
-  --color-selected: #1f2640;
-  --color-danger-surface: #2a1714;
+  --color-selected: #0f1830;
+  --color-danger-surface: #1a0c0a;
   --color-danger-border: #e0624d;
-  --color-column: #202024;
+  --color-column: #0f0f0f;
   --color-success: #3da56c;
   --color-success-ink: #6ccb94;
-  --color-inverse: #ececee;
-  --color-on-inverse: #111113;
+  --color-inverse: #ededed;
+  --color-on-inverse: #000000;
 
   --shadow-pop: 0 10px 28px rgb(0 0 0 / 0.5);
   --shadow-dialog: 0 24px 60px rgb(0 0 0 / 0.6);

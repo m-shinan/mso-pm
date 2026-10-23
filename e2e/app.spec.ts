@@ -101,8 +101,9 @@ test("post in the General chat and see it right away", async ({ page }) => {
   await box.fill("Hello team");
   await box.press("Enter");
   await expect(page.getByText("Hello team")).toBeVisible();
-  const { data } = await admin().from("chat_messages").select("body").eq("organization_id", d.orgId);
-  expect(data?.map((m) => m.body)).toContain("Hello team");
+  await expect
+    .poll(async () => (await admin().from("chat_messages").select("body").eq("organization_id", d.orgId)).data?.map((m) => m.body))
+    .toContain("Hello team");
 });
 
 test("only platform admins can open the admin console", async ({ page }) => {

@@ -6,6 +6,7 @@ import { Bug, Folder, LayoutGrid, Menu as MenuIcon, Plus, Search } from "lucide-
 import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/ui/menu";
 import { AccountMenu } from "./account-menu";
 import { NotificationBell } from "./notification-bell";
+import { ThemeToggle } from "./theme-toggle";
 import { cn } from "@/lib/utils";
 import { isActive, PRIMARY_NAV, SETTINGS_NAV, WORKSPACE_NAV } from "./nav";
 import { useOrg } from "./org-provider";
@@ -22,6 +23,7 @@ export function MobileTopBar() {
       <button type="button" aria-label="Search" onClick={openSearch} className="inline-flex size-11 items-center justify-center rounded-lg text-ink-2">
         <Search aria-hidden className="size-5" />
       </button>
+      <ThemeToggle />
       <NotificationBell />
       <AccountMenu compact />
     </header>

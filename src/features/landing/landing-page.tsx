@@ -1,6 +1,7 @@
 import { ArrowRight, Check, FileText, Flag, FolderKanban, Globe, Mail, ShieldCheck, TriangleAlert, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
+import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { buttonClass } from "@/components/ui/button";
 import { HOME } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -71,6 +72,7 @@ export function LandingPage({ signedIn }: { signedIn: boolean }) {
             <a href="#contact" className="hover:text-ink">Contact</a>
           </nav>
           <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle />
             {signedIn ? (
               <Link href={HOME} className={buttonClass("primary", "md", "h-10 px-4 text-md")}>
                 Open dashboard <ArrowRight aria-hidden className="size-4" />
