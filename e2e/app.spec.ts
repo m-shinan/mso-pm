@@ -167,6 +167,39 @@ test("open a task and comment on it", async ({ page }) => {
     .toContain("Looks good from here.");
 });
 
+test("attach a file to a task: it goes to R2, opens with a short-lived link, and can be deleted", async ({ page, request }) => {
+  test.skip(!process.env.R2_BUCKET, "R2 isn't configured here");
+  // Capture the link the app opens in a new tab instead of opening one.
+  await page.addInitScript(() => {
+    const w = window as unknown as { openedUrl?: string };
+    window.open = () => ({ opener: null, close() {}, location: { replace: (u: string) => (w.openedUrl = u) } }) as unknown as Window;
+  });
+  // 1×1 PNG: images open in the browser, so the signed link can be checked.
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
+  await page.goto(`${board}?task=web-1`);
+  const drawer = page.getByRole("dialog");
+  await drawer.locator('input[type="file"]').setInputFiles({ name: "pixel.png", mimeType: "image/png", buffer: png });
+  const listed = drawer.getByRole("listitem").getByRole("button", { name: "pixel.png", exact: true });
+  await expect(listed).toBeVisible();
+  await expect
+    .poll(async () => (await admin().from("attachments").select("name").eq("organization_id", d.orgId)).data?.map((a) => a.name))
+    .toContain("pixel.png");
+
+  await listed.click();
+  const openedUrl = () => page.evaluate(() => (window as unknown as { openedUrl?: string }).openedUrl ?? "");
+  await expect.poll(openedUrl).toContain(".r2.cloudflarestorage.com/");
+  const file = await request.get(await openedUrl());
+  expect(file.status()).toBe(200);
+  expect(file.headers()["content-type"]).toBe("image/png");
+  expect((await file.body()).equals(png)).toBe(true);
+
+  await drawer.getByRole("button", { name: "Delete pixel.png" }).click();
+  await expect(listed).toHaveCount(0);
+  await expect
+    .poll(async () => (await admin().from("attachments").select("id").eq("organization_id", d.orgId)).data?.length)
+    .toBe(0);
+});
+
 test("report an issue", async ({ page }) => {
   await page.goto(`/${d.orgSlug}/issues`);
   await page.getByRole("main").getByRole("button", { name: "Report issue" }).click();
