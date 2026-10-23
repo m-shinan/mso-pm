@@ -32,8 +32,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-dvh">
         <Toaster>{children}</Toaster>
-        {/* Cookieless page views; only collects once Web Analytics is enabled for the Vercel project. */}
-        <Analytics />
+        {/* Cookieless page views; only collects once Web Analytics is enabled for the Vercel project.
+            Vercel serves its script, so elsewhere (CI, `next start`) it would only 404. */}
+        {process.env.VERCEL ? <Analytics /> : null}
       </body>
     </html>
   );
