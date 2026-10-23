@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -72,6 +72,50 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      admin_audit_log: {
+        Row: {
+          action: string
+          actor_email: string | null
+          actor_id: string | null
+          created_at: string
+          details: Json
+          id: number
+          target_id: string | null
+          target_label: string | null
+          target_type: string
+        }
+        Insert: {
+          action: string
+          actor_email?: string | null
+          actor_id?: string | null
+          created_at?: string
+          details?: Json
+          id?: never
+          target_id?: string | null
+          target_label?: string | null
+          target_type: string
+        }
+        Update: {
+          action?: string
+          actor_email?: string | null
+          actor_id?: string | null
+          created_at?: string
+          details?: Json
+          id?: never
+          target_id?: string | null
+          target_label?: string | null
+          target_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_audit_log_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -140,6 +184,181 @@ export type Database = {
           {
             foreignKeyName: "attachments_uploaded_by_fkey"
             columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_channels: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          direct_key: string | null
+          id: string
+          kind: string
+          last_message_at: string | null
+          name: string | null
+          organization_id: string
+          project_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          direct_key?: string | null
+          id?: string
+          kind: string
+          last_message_at?: string | null
+          name?: string | null
+          organization_id: string
+          project_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          direct_key?: string | null
+          id?: string
+          kind?: string
+          last_message_at?: string | null
+          name?: string | null
+          organization_id?: string
+          project_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_channels_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_channels_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_channels_organization_id_project_id_fkey"
+            columns: ["organization_id", "project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      chat_members: {
+        Row: {
+          added_at: string
+          channel_id: string
+          organization_id: string
+          user_id: string
+        }
+        Insert: {
+          added_at?: string
+          channel_id: string
+          organization_id: string
+          user_id: string
+        }
+        Update: {
+          added_at?: string
+          channel_id?: string
+          organization_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_members_organization_id_channel_id_fkey"
+            columns: ["organization_id", "channel_id"]
+            isOneToOne: false
+            referencedRelation: "chat_channels"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "chat_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_messages: {
+        Row: {
+          author_id: string | null
+          body: string
+          channel_id: string
+          created_at: string
+          edited_at: string | null
+          id: string
+          organization_id: string
+        }
+        Insert: {
+          author_id?: string | null
+          body: string
+          channel_id: string
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          organization_id: string
+        }
+        Update: {
+          author_id?: string | null
+          body?: string
+          channel_id?: string
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_organization_id_channel_id_fkey"
+            columns: ["organization_id", "channel_id"]
+            isOneToOne: false
+            referencedRelation: "chat_channels"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      chat_reads: {
+        Row: {
+          channel_id: string
+          last_read_at: string
+          organization_id: string
+          user_id: string
+        }
+        Insert: {
+          channel_id: string
+          last_read_at?: string
+          organization_id: string
+          user_id?: string
+        }
+        Update: {
+          channel_id?: string
+          last_read_at?: string
+          organization_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_reads_organization_id_channel_id_fkey"
+            columns: ["organization_id", "channel_id"]
+            isOneToOne: false
+            referencedRelation: "chat_channels"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "chat_reads_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -347,6 +566,72 @@ export type Database = {
           {
             foreignKeyName: "documents_updated_by_fkey"
             columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feedback: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          kind: string
+          organization_id: string | null
+          organization_name: string | null
+          page: string | null
+          resolved_at: string | null
+          status: string
+          subject: string
+          user_agent: string | null
+          user_email: string | null
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          kind: string
+          organization_id?: string | null
+          organization_name?: string | null
+          page?: string | null
+          resolved_at?: string | null
+          status?: string
+          subject: string
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          organization_id?: string | null
+          organization_name?: string | null
+          page?: string | null
+          resolved_at?: string | null
+          status?: string
+          subject?: string
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -849,14 +1134,14 @@ export type Database = {
         Row: {
           avatar_path: string | null
           created_at: string
-          email_notifications: boolean
+          email: string
           email_assignments: boolean
           email_chat: boolean
           email_comments: boolean
           email_deadlines: boolean
+          email_notifications: boolean
           email_projects: boolean
           email_reviews: boolean
-          email: string
           full_name: string
           id: string
           last_org_id: string | null
@@ -865,14 +1150,14 @@ export type Database = {
         Insert: {
           avatar_path?: string | null
           created_at?: string
-          email_notifications?: boolean
+          email: string
           email_assignments?: boolean
           email_chat?: boolean
           email_comments?: boolean
           email_deadlines?: boolean
+          email_notifications?: boolean
           email_projects?: boolean
           email_reviews?: boolean
-          email: string
           full_name?: string
           id: string
           last_org_id?: string | null
@@ -881,14 +1166,14 @@ export type Database = {
         Update: {
           avatar_path?: string | null
           created_at?: string
-          email_notifications?: boolean
+          email?: string
           email_assignments?: boolean
           email_chat?: boolean
           email_comments?: boolean
           email_deadlines?: boolean
+          email_notifications?: boolean
           email_projects?: boolean
           email_reviews?: boolean
-          email?: string
           full_name?: string
           id?: string
           last_org_id?: string | null
@@ -947,216 +1232,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organization_members"
             referencedColumns: ["organization_id", "user_id"]
-          },
-        ]
-      }
-      admin_audit_log: {
-        Row: {
-          action: string
-          actor_email: string | null
-          actor_id: string | null
-          created_at: string
-          details: Json
-          id: number
-          target_id: string | null
-          target_label: string | null
-          target_type: string
-        }
-        Insert: {
-          action: string
-          actor_email?: string | null
-          actor_id?: string | null
-          created_at?: string
-          details?: Json
-          id?: never
-          target_id?: string | null
-          target_label?: string | null
-          target_type: string
-        }
-        Update: {
-          action?: string
-          actor_email?: string | null
-          actor_id?: string | null
-          created_at?: string
-          details?: Json
-          id?: never
-          target_id?: string | null
-          target_label?: string | null
-          target_type?: string
-        }
-        Relationships: []
-      }
-      chat_channels: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          direct_key: string | null
-          id: string
-          kind: string
-          last_message_at: string | null
-          name: string | null
-          organization_id: string
-          project_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          direct_key?: string | null
-          id?: string
-          kind: string
-          last_message_at?: string | null
-          name?: string | null
-          organization_id: string
-          project_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          direct_key?: string | null
-          id?: string
-          kind?: string
-          last_message_at?: string | null
-          name?: string | null
-          organization_id?: string
-          project_id?: string | null
-        }
-        Relationships: []
-      }
-      chat_members: {
-        Row: {
-          added_at: string
-          channel_id: string
-          organization_id: string
-          user_id: string
-        }
-        Insert: {
-          added_at?: string
-          channel_id: string
-          organization_id: string
-          user_id: string
-        }
-        Update: {
-          added_at?: string
-          channel_id?: string
-          organization_id?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      chat_messages: {
-        Row: {
-          author_id: string | null
-          body: string
-          channel_id: string
-          created_at: string
-          edited_at: string | null
-          id: string
-          organization_id: string
-        }
-        Insert: {
-          author_id?: string | null
-          body: string
-          channel_id: string
-          created_at?: string
-          edited_at?: string | null
-          id?: string
-          organization_id: string
-        }
-        Update: {
-          author_id?: string | null
-          body?: string
-          channel_id?: string
-          created_at?: string
-          edited_at?: string | null
-          id?: string
-          organization_id?: string
-        }
-        Relationships: []
-      }
-      chat_reads: {
-        Row: {
-          channel_id: string
-          last_read_at: string
-          organization_id: string
-          user_id: string
-        }
-        Insert: {
-          channel_id: string
-          last_read_at?: string
-          organization_id: string
-          user_id?: string
-        }
-        Update: {
-          channel_id?: string
-          last_read_at?: string
-          organization_id?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      feedback: {
-        Row: {
-          body: string
-          created_at: string
-          id: string
-          kind: string
-          organization_id: string | null
-          organization_name: string | null
-          page: string | null
-          resolved_at: string | null
-          status: string
-          subject: string
-          user_agent: string | null
-          user_email: string | null
-          user_id: string | null
-          user_name: string | null
-        }
-        Insert: {
-          body: string
-          created_at?: string
-          id?: string
-          kind: string
-          organization_id?: string | null
-          organization_name?: string | null
-          page?: string | null
-          resolved_at?: string | null
-          status?: string
-          subject: string
-          user_agent?: string | null
-          user_email?: string | null
-          user_id?: string | null
-          user_name?: string | null
-        }
-        Update: {
-          body?: string
-          created_at?: string
-          id?: string
-          kind?: string
-          organization_id?: string | null
-          organization_name?: string | null
-          page?: string | null
-          resolved_at?: string | null
-          status?: string
-          subject?: string
-          user_agent?: string | null
-          user_email?: string | null
-          user_id?: string | null
-          user_name?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "feedback_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "feedback_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
           },
         ]
       }
@@ -1641,18 +1716,21 @@ export type Database = {
     }
     Functions: {
       accept_invitation: { Args: { p_token: string }; Returns: string }
-      add_chat_members: { Args: { p_channel: string; p_members: string[] }; Returns: undefined }
+      add_chat_members: {
+        Args: { p_channel: string; p_members: string[] }
+        Returns: undefined
+      }
       admin_delete_user: { Args: { p_user: string }; Returns: undefined }
       admin_list_organizations: {
         Args: { p_limit?: number; p_offset?: number; p_search?: string }
         Returns: {
-          archived_at: string | null
+          archived_at: string
           created_at: string
           id: string
-          last_activity_at: string | null
+          last_activity_at: string
           members: number
           name: string
-          owner_email: string | null
+          owner_email: string
           projects: number
           slug: string
           tasks: number
@@ -1665,9 +1743,9 @@ export type Database = {
           confirmed: boolean
           created_at: string
           email: string
-          full_name: string | null
+          full_name: string
           id: string
-          last_sign_in_at: string | null
+          last_sign_in_at: string
           organizations: number
           platform_admin: boolean
           suspended: boolean
@@ -1676,29 +1754,26 @@ export type Database = {
       }
       admin_recent_emails: {
         Args: { p_limit?: number }
-        Returns: { created_at: string; error: string | null; id: number; status_code: number | null }[]
-      }
-      admin_set_organization_archived: { Args: { p_archived: boolean; p_org: string }; Returns: undefined }
-      admin_set_platform_admin: { Args: { p_admin: boolean; p_email: string }; Returns: undefined }
-      admin_set_user_suspended: { Args: { p_suspended: boolean; p_user: string }; Returns: undefined }
-      admin_stats: { Args: never; Returns: Json }
-      chat_overview: {
-        Args: { p_org: string }
         Returns: {
-          id: string
-          kind: string
-          last_message_at: string | null
-          name: string | null
-          other_user_id: string | null
-          project_id: string | null
-          unread: number
+          created_at: string
+          error: string
+          id: number
+          status_code: number
         }[]
       }
-      create_group_chat: { Args: { p_members: string[]; p_name: string; p_org: string }; Returns: string }
-      delete_my_account: { Args: never; Returns: undefined }
-      mark_chat_read: { Args: { p_channel: string }; Returns: undefined }
-      open_direct_chat: { Args: { p_org: string; p_user: string }; Returns: string }
-      is_platform_admin: { Args: never; Returns: boolean }
+      admin_set_organization_archived: {
+        Args: { p_archived: boolean; p_org: string }
+        Returns: undefined
+      }
+      admin_set_platform_admin: {
+        Args: { p_admin: boolean; p_email: string }
+        Returns: undefined
+      }
+      admin_set_user_suspended: {
+        Args: { p_suspended: boolean; p_user: string }
+        Returns: undefined
+      }
+      admin_stats: { Args: never; Returns: Json }
       calendar_items: {
         Args: { p_from: string; p_org: string; p_to: string }
         Returns: {
@@ -1711,6 +1786,22 @@ export type Database = {
           status_id: string
           sub: string
         }[]
+      }
+      chat_overview: {
+        Args: { p_org: string }
+        Returns: {
+          id: string
+          kind: string
+          last_message_at: string
+          name: string
+          other_user_id: string
+          project_id: string
+          unread: number
+        }[]
+      }
+      create_group_chat: {
+        Args: { p_members: string[]; p_name: string; p_org: string }
+        Returns: string
       }
       create_organization: {
         Args: {
@@ -1740,6 +1831,7 @@ export type Database = {
         }
       }
       dashboard_summary: { Args: { p_org: string }; Returns: Json }
+      delete_my_account: { Args: never; Returns: undefined }
       invitation_preview: {
         Args: { p_token: string }
         Returns: {
@@ -1750,6 +1842,8 @@ export type Database = {
           status: string
         }[]
       }
+      is_platform_admin: { Args: never; Returns: boolean }
+      mark_chat_read: { Args: { p_channel: string }; Returns: undefined }
       my_archived_organizations: {
         Args: never
         Returns: {
@@ -1760,6 +1854,10 @@ export type Database = {
         }[]
       }
       my_permissions: { Args: { p_org: string }; Returns: string[] }
+      open_direct_chat: {
+        Args: { p_org: string; p_user: string }
+        Returns: string
+      }
       option_usage: {
         Args: { p_org: string }
         Returns: {

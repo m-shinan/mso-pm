@@ -548,7 +548,7 @@ describe("chat", () => {
 
   it("project channels follow who can read the project", async () => {
     expect(await channel(dev, "project", project.P1)).toHaveLength(1);
-    expect(await channel(dev, "project", project.P2)).toHaveLength(0);
+    expect(await channel(viewer, "project", project.P2)).toHaveLength(0);
     expect(await channel(pm, "project", project.P2)).toHaveLength(1);
   });
 
@@ -645,9 +645,10 @@ describe("admin console", () => {
       expect(found.map((u: { id: string }) => u.id)).toEqual([outsider.id]);
 
       ran(await ownerB.client.rpc("admin_set_user_suspended", { p_user: outsider.id, p_suspended: true }), "suspend");
-      expect((await admin.auth.admin.getUserById(outsider.id)).data.user?.banned_until).toBeTruthy();
+      const banned = async () => (await client.query("select banned_until from auth.users where id = $1", [outsider.id])).rows[0].banned_until;
+      expect(await banned()).not.toBeNull();
       ran(await ownerB.client.rpc("admin_set_user_suspended", { p_user: outsider.id, p_suspended: false }), "restore");
-      expect((await admin.auth.admin.getUserById(outsider.id)).data.user?.banned_until ?? null).toBeNull();
+      expect(await banned()).toBeNull();
 
       const log = ok(await ownerB.client.from("admin_audit_log").select("action").eq("actor_id", ownerB.id), "log");
       expect(log.map((l) => l.action)).toEqual(expect.arrayContaining(["user_suspended", "user_restored"]));
