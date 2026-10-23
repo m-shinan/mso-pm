@@ -272,7 +272,7 @@ async function Emails() {
                 <tr key={r.id}>
                   <td className="px-4 py-2.5 text-ink-3" suppressHydrationWarning>{timeAgo(r.created_at)}</td>
                   <td className={cn("px-3 py-2.5", ok ? "text-success-ink" : "text-danger-ink")}>{r.status_code ?? "No answer"}{ok ? " · sent" : ""}</td>
-                  <td className="px-4 py-2.5 font-mono text-xs break-all text-ink-3">{r.error ?? ""}</td>
+                  <td className="px-4 py-2.5 text-xs break-words text-ink-3">{readableError(r.error)}</td>
                 </tr>
               );
             })}
@@ -282,6 +282,16 @@ async function Emails() {
       </div>
     </>
   );
+}
+
+/** Resend answers with JSON ({"message": ...}); show just the sentence. */
+function readableError(raw: string | null) {
+  if (!raw) return "";
+  try {
+    const parsed = JSON.parse(raw) as { message?: unknown };
+    if (typeof parsed.message === "string") return parsed.message;
+  } catch {}
+  return raw;
 }
 
 async function Audit() {

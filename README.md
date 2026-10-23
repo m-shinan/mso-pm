@@ -54,6 +54,14 @@ npm run db:sql -- -e "insert into private.platform_admins values ('someone@examp
 
 Each person can send 5 items an hour. Senders on `@example.com` (the test suites) are not emailed.
 
+### File attachments (Cloudflare R2)
+
+Attachments are stored in a private R2 bucket (free egress) instead of Supabase
+Storage. Set `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and
+`R2_BUCKET` in `.env.local`, in Vercel, and as GitHub secrets (for the weekly
+`R2 cleanup` workflow). The bucket needs a CORS rule allowing `PUT` and `GET`
+from the app's origins. Without these, uploads say file storage isn't set up.
+
 ### Admin console
 
 Platform admins (above) also get `/admin`: usage numbers, every account and

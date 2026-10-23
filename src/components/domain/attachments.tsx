@@ -4,8 +4,7 @@ import { FileText, ImageIcon, Paperclip, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useOrg } from "@/components/shell/org-provider";
 import { useToast } from "@/components/ui/toast";
-import { friendlyError } from "@/lib/errors";
-import { supabaseBrowser } from "@/lib/supabase/client";
+import { attachmentUrl, cancelUpload, deleteAttachment, startUpload } from "@/features/attachments/actions";
 import { cn } from "@/lib/utils";
 import type { AttachmentRow } from "@/features/tasks/queries";
 
@@ -39,11 +38,11 @@ async function shrinkImage(file: File): Promise<File> {
   return new File([blob], file.name.replace(/\.[^.]+$/, "") + ext, { type });
 }
 
-function safeName(name: string) {
-  return name.normalize("NFKD").replace(/[^\w.\-]+/g, "_").slice(-80) || "file";
-}
-
-/** Attachment list + upload for a task or an issue. Files are private; opening creates a 60-second link. */
+/**
+ * Attachment list + upload for a task or an issue. Files live in Cloudflare R2:
+ * the browser uploads and downloads directly with signed links from the
+ * server, so they never pass through Supabase (no egress there) or Vercel.
+ */
 export function Attachments({
   initial,
   target,
@@ -57,12 +56,9 @@ export function Attachments({
   const [items, setItems] = useState(initial);
   const [busy, setBusy] = useState<string | null>(null);
   const canUpload = can("tasks.update") || can("issues.update");
-  const kind = target.taskId ? "task" : "issue";
-  const entityId = (target.taskId ?? target.issueId)!;
 
   async function upload(files: FileList | null) {
     if (!files?.length) return;
-    const supabase = supabaseBrowser();
     for (const original of Array.from(files)) {
       setBusy(`Uploading ${original.name}…`);
       const file = await shrinkImage(original);
@@ -70,54 +66,53 @@ export function Attachments({
         toast({ message: `${original.name} is over 10 MB.` });
         continue;
       }
-      const path = `${org.id}/${target.projectId}/${kind}/${entityId}/${crypto.randomUUID()}-${safeName(file.name)}`;
-      const up = await supabase.storage.from("attachments").upload(path, file, { contentType: file.type || "application/octet-stream" });
-      if (up.error) {
-        toast({ message: friendlyError(up.error, `upload ${original.name}`) });
+      const started = await startUpload({
+        orgId: org.id,
+        projectId: target.projectId,
+        taskId: target.taskId,
+        issueId: target.issueId,
+        name: file.name.slice(0, 200),
+        size: file.size,
+        type: (file.type || "application/octet-stream").slice(0, 100),
+      });
+      if ("error" in started) {
+        toast({ message: started.error });
         continue;
       }
-      const { data, error } = await supabase
-        .from("attachments")
-        .insert({
-          organization_id: org.id,
-          project_id: target.projectId,
-          task_id: target.taskId ?? null,
-          issue_id: target.issueId ?? null,
-          storage_path: path,
-          name: file.name.slice(0, 200),
-          size_bytes: file.size,
-          mime_type: (file.type || "application/octet-stream").slice(0, 100),
-          uploaded_by: currentUserId,
-        })
-        .select("id, name, size_bytes, mime_type, storage_path, uploaded_by, created_at")
-        .single();
-      if (error || !data) {
-        await supabase.storage.from("attachments").remove([path]);
-        toast({ message: friendlyError(error, `save ${original.name}`) });
+      const put = await fetch(started.uploadUrl, { method: "PUT", headers: { "content-type": started.contentType }, body: file }).catch(() => null);
+      if (!put?.ok) {
+        await cancelUpload(started.row.id);
+        toast({ message: `Couldn’t upload ${original.name}. Please try again.` });
         continue;
       }
-      setItems((all) => [...all, data]);
+      setItems((all) => [...all, started.row]);
     }
     setBusy(null);
     if (input.current) input.current.value = "";
   }
 
   async function open(a: AttachmentRow) {
-    const { data, error } = await supabaseBrowser().storage.from("attachments").createSignedUrl(a.storage_path, 60);
-    if (error || !data) return toast({ message: friendlyError(error, "open the file") });
-    window.open(data.signedUrl, "_blank", "noopener");
+    // Open the tab now (inside the click) so pop-up blockers allow it, then point it at the signed link.
+    const tab = window.open("", "_blank");
+    const res = await attachmentUrl(a.id);
+    if ("error" in res) {
+      tab?.close();
+      return toast({ message: res.error });
+    }
+    if (tab) {
+      tab.opener = null;
+      tab.location.replace(res.url);
+    } else window.location.assign(res.url);
   }
 
   async function remove(a: AttachmentRow) {
-    const supabase = supabaseBrowser();
     const before = items;
     setItems((all) => all.filter((x) => x.id !== a.id));
-    const row = await supabase.from("attachments").delete().eq("id", a.id).select("id").single();
-    if (row.error) {
+    const res = await deleteAttachment(a.id);
+    if (res.error) {
       setItems(before);
-      return toast({ message: friendlyError(row.error, "delete the file") });
+      toast({ message: res.error });
     }
-    await supabase.storage.from("attachments").remove([a.storage_path]);
   }
 
   return (

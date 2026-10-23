@@ -198,9 +198,12 @@ in-app notifications, global search, dashboard summary RPC, configurable options
 (add, rename, recolour, reorder, default, archive, delete-if-unused).
 
 Also built: board drag and drop (dnd-kit; mouse, touch press-and-hold, keyboard
-with screen-reader announcements), attachments on tasks and issues (private
-`attachments` bucket, storage RLS by `{org}/{project}/…` path, 60-second signed
-URLs, images shrunk to ≤1600px in the browser, 10 MB cap), milestones tab with
+with screen-reader announcements), attachments on tasks and issues (files in
+Cloudflare R2 to avoid Supabase egress, keyed `{org}/{project}/…`; the server
+records the row under RLS, then hands out a 5-minute signed PUT and 60-second
+signed GETs, so access is still decided by the `attachments` policies; images
+shrunk to ≤1600px in the browser, 10 MB cap; orphaned files removed weekly by
+`scripts/r2-cleanup.mjs`), milestones tab with
 progress, labels settings and task label chips, task dependencies ("blocked by",
 loops rejected by a trigger), custom roles editor, per-project role overrides
 (guarded so nobody can grant more than they have).

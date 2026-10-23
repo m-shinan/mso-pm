@@ -13,7 +13,6 @@ import { useToast } from "@/components/ui/toast";
 import { Comments } from "@/components/domain/comments";
 import { StatusPicker, useOptimisticStatus } from "@/components/domain/status-picker";
 import { friendlyError } from "@/lib/errors";
-import { supabaseBrowser } from "@/lib/supabase/client";
 import { timeAgo } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { CommentRow } from "@/features/issues/queries";
@@ -155,10 +154,7 @@ function TaskBody({ task, comments, extras, onDeleted }: { task: TaskDetail; com
   }
 
   async function remove() {
-    // Remove the files first; the attachment rows go with the task (cascade).
-    if (task.attachments.length) {
-      await supabaseBrowser().storage.from("attachments").remove(task.attachments.map((a) => a.storage_path));
-    }
+    // Attachment rows go with the task (cascade); their files are removed by the weekly R2 cleanup.
     const { error } = await deleteTask(task.id);
     if (error) return toast({ message: friendlyError(error, "delete the task") });
     toast({ message: `${task.key} deleted` });
