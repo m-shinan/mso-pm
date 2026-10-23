@@ -634,7 +634,8 @@ describe("admin console", () => {
     expect(ok(await owner.client.from("admin_audit_log").select("id"), "audit")).toHaveLength(0);
   });
 
-  it("a platform admin can see numbers, suspend and restore an account, and it is logged", async () => {
+  // Needs a direct database connection to grant admin access; CI has only the API keys.
+  it.skipIf(!process.env.SUPABASE_DB_URL)("a platform admin can see numbers, suspend and restore an account, and it is logged", async () => {
     const client = db();
     await client.connect();
     try {
