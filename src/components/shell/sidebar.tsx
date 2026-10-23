@@ -46,7 +46,7 @@ export function Sidebar({ counts }: { counts: NavCounts }) {
   const pinned = projects.filter((p) => p.pinned);
 
   return (
-    <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-line bg-sunken lg:flex">
+    <aside className="hidden h-dvh w-60 shrink-0 flex-col border-r border-line bg-sunken lg:flex">
       <div className="flex flex-col gap-2 px-3 pt-3 pb-2">
         <OrgSwitcher />
         <button
@@ -60,7 +60,7 @@ export function Sidebar({ counts }: { counts: NavCounts }) {
         </button>
       </div>
 
-      <nav aria-label="Main" className="flex min-h-0 grow flex-col gap-0.5 overflow-y-auto px-3 py-1">
+      <nav aria-label="Main" className="flex min-h-0 grow flex-col gap-0.5 overflow-y-auto overscroll-contain px-3 py-1">
         {PRIMARY_NAV.map((item) => (
           <NavLink
             key={item.path}

@@ -42,9 +42,10 @@ export default async function OrgLayout({ children, params }: LayoutProps<"/[org
   return (
     <OrgProvider org={org} orgs={orgs} data={data}>
       <LiveNotificationsProvider userId={userId} orgId={org.id} initial={notifications}>
-      <div className="flex min-h-dvh">
+      {/* Desktop: the window stays put; the sidebar and the page scroll separately. */}
+      <div className="flex min-h-dvh lg:h-dvh lg:overflow-hidden">
         <Sidebar counts={counts} />
-        <div className="flex min-w-0 grow flex-col pb-[calc(env(safe-area-inset-bottom)+72px)] lg:pb-0">
+        <div className="flex min-w-0 grow flex-col pb-[calc(env(safe-area-inset-bottom)+72px)] lg:overflow-y-auto lg:overscroll-contain lg:pb-0">
           <MobileTopBar />
           {children}
         </div>
