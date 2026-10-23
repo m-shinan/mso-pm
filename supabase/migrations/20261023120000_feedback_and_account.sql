@@ -7,7 +7,8 @@
 create table private.platform_admins (
   email text primary key check (email = lower(email))
 );
-insert into private.platform_admins (email) values ('mshinan2002@gmail.com');
+-- Empty on purpose: each installation names its own admins with
+-- `node --env-file=.env.local scripts/platform-admin.mjs you@example.org`.
 
 create function private.is_platform_admin() returns boolean
 language sql stable security definer set search_path = '' as $$

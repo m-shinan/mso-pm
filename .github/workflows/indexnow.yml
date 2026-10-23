@@ -1,0 +1,22 @@
+name: IndexNow
+
+# After Vercel finishes a production deploy, tell Bing and other IndexNow search
+# engines that the public pages changed (scripts/indexnow.mjs). No secrets needed.
+on:
+  deployment_status:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    if: github.event_name == 'workflow_dispatch' || (github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Production')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: node scripts/indexnow.mjs

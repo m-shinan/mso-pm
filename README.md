@@ -1,134 +1,166 @@
 # mso-pm
 
-Project management for a software studio: projects, tasks, issues, releases,
-clients and documents, across any number of organizations with one login.
+**Free, open-source project management for software studios and teams.**
+Kanban boards, tasks, issues, releases, clients, docs and team chat, across any
+number of organizations with one login, with private-by-default data.
 
-Next.js 16 · Supabase (Postgres + Auth, RLS on every table) · Tailwind v4.
-Architecture, schema and security model: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-Design: https://claude.ai/artifact/Mmb594PjtmzfUSUxtsnMNA
+[Live app](https://pm.mshinan.com) ·
+[Architecture](docs/ARCHITECTURE.md) ·
+[Contributing](CONTRIBUTING.md) ·
+[Security](SECURITY.md) ·
+License: [AGPL-3.0](LICENSE)
 
-## Setup
+![mso-pm](https://pm.mshinan.com/og.png)
 
-Requires Node 22+ (24 recommended).
+## Features
 
-```bash
-npm install
-cp .env.example .env.local   # fill in values from the Supabase dashboard
-npm run db:push              # apply supabase/migrations to the database
-npm run dev                  # http://localhost:3000
-```
+- **Projects and boards**: board and list views, your own statuses, priorities
+  and labels, drag and drop (mouse, touch and keyboard), checklists, task
+  dependencies, milestones and releases.
+- **Issues**: severity, steps, links to tasks, sorted by what matters.
+- **Team chat**: a General channel per organization, a channel per project,
+  named groups and direct messages, all live.
+- **Notifications**: corner pop-ups with a sound, and per-category email for
+  assignments, reviews, deadlines (08:00 in each organization's time zone),
+  comments and project changes. Reviews follow task status.
+- **Organizations and roles**: one login, many organizations; owner, admin,
+  project manager, developer and viewer roles, custom roles, per-project
+  overrides, single-use email invitations.
+- **Clients and docs**: client records with their projects; docs next to the work.
+- **Accounts**: 6-digit email codes for sign-up and password reset, 30-day
+  sessions, email preferences, delete account.
+- **Admin console** for whoever runs the installation: usage numbers, users
+  and organizations (metadata only), suspend and restore, audit log, email
+  delivery log, and an inbox for feature requests and issue reports.
+- **Installable** on Android, iPhone and desktop (PWA), light and dark themes,
+  works on phones.
 
-Sign up, confirm your email, then create an organization.
+## How it's built
 
-In Supabase → Authentication → URL configuration, the Site URL and redirect
-list must include your app's URL (e.g. `http://localhost:3000/**` and your
-Vercel domain) or confirmation and reset links won't come back to the app.
-Supabase's built-in email only delivers to members of your Supabase team; add
-custom SMTP before inviting outside users to sign up.
+Next.js 16 (App Router, Server Components) · Supabase (Postgres, Auth,
+Realtime, Vault, `pg_cron`, `pg_net`) · Tailwind CSS v4 · Cloudflare R2 for
+files · Resend for email · Vercel for hosting.
 
-### Email notifications (optional)
+Every table has row-level security, so the database itself decides who can
+read or change what: the UI only hides what you can't do. The model, schema
+and trade-offs are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), and
+`tests/rls.test.ts` checks them against a real database with real users.
 
-Notifications (assigned to you, comments on your work, added to a project) can
-also go out by email through [Resend](https://resend.com) (free tier: 3,000/month).
+## Run your own copy
 
-1. Create a Resend account, add and verify your sending domain, create an API key.
-2. Store the settings in Supabase Vault (the key is read from the environment, not typed as an argument):
+Everything below fits in free tiers: Supabase (database and auth), Vercel
+Hobby (hosting, personal and non-commercial use), Cloudflare R2 (10 GB of
+files, free downloads) and Resend (3,000 emails a month).
+
+### 1. Database
+
+1. Create a project at [supabase.com](https://supabase.com).
+2. `cp .env.example .env.local` and fill in the Supabase values (Project
+   Settings → API keys and Database → connection string, session pooler).
+3. Apply the schema and make yourself the platform admin:
 
    ```bash
-   RESEND_API_KEY=re_... node --env-file=.env.local scripts/email-setup.mjs "mso-pm <notify@yourdomain.com>" https://your-app.vercel.app
+   npm install
+   npm run db:push
+   node --env-file=.env.local scripts/platform-admin.mjs you@example.org
    ```
 
-Nothing is sent until this is done. `scripts/email-setup.mjs --off` turns it off again.
-Each person can switch emails off in the account menu.
-
-### Feedback inbox
-
-"Request a feature" and "Report an issue" (account menu) save to the `feedback`
-table. Senders can't read it back; only platform admins can, at `/feedback`,
-and each new item is emailed to them through the same Resend settings. Admins
-are listed by email in `private.platform_admins` (seeded with the owner's address):
+### 2. App
 
 ```bash
-npm run db:sql -- -e "insert into private.platform_admins values ('someone@example.org')"
+npm run dev    # http://localhost:3000
 ```
 
-Each person can send 5 items an hour. Senders on `@example.com` (the test suites) are not emailed.
+Sign up with the email you made admin, confirm it with the code, and create an
+organization. In Supabase → Authentication → URL Configuration, add your app's
+URLs to the redirect list (`http://localhost:3000/**` and your production URL).
 
-### File attachments (Cloudflare R2)
+### 3. Email (sign-up codes and notifications)
 
-Attachments are stored in a private R2 bucket (free egress) instead of Supabase
-Storage. Set `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and
-`R2_BUCKET` in `.env.local`, in Vercel, and as GitHub secrets (for the weekly
-`R2 cleanup` workflow). The bucket needs a CORS rule allowing `PUT` and `GET`
-from the app's origins. Without these, uploads say file storage isn't set up.
+Supabase's built-in email only reaches members of your Supabase team, so add
+your own sender before inviting anyone:
 
-### Admin console
+1. In [Resend](https://resend.com), verify your domain and create an API key.
+2. Supabase → Authentication → Emails → SMTP: host `smtp.resend.com`, port
+   `465`, user `resend`, the API key as password, and your sender address.
+3. Store the same settings for notification emails (read from the environment,
+   so the key never lands in your shell history):
 
-Platform admins (above) also get `/admin`: usage numbers, every account and
-organization (metadata only, never their content), suspend / restore / delete
-accounts, archive organizations, recent email deliveries, and an audit log of
-every admin action.
+   ```bash
+   RESEND_API_KEY=re_... node --env-file=.env.local scripts/email-setup.mjs "mso-pm <noreply@yourdomain.com>" https://your-app.example
+   ```
 
-### Chat and notifications
+4. After deploying (step 5), switch the sign-up and reset emails to codes:
+   `node --env-file=.env.local scripts/auth-emails.mjs` (needs
+   `SUPABASE_ACCESS_TOKEN`).
 
-Each organization has a General channel, a channel per project (whoever can
-read the project), named groups, and direct messages, all live over Realtime.
-Notifications pop up in the corner with a chime (per-device switch in the
-account menu) and are emailed per category (Account settings). Reviews follow
-task status: a status whose name contains "review" asks owners, admins and
-project managers to review; leaving it tells the assignee it was approved or
-needs changes. Deadline reminders run hourly via `pg_cron` and fire at 08:00 in
-each organization's timezone.
+### 4. Files (Cloudflare R2)
 
-### Sign-in emails
+1. Create a bucket (for example `mso-pm-attachments`) and add a CORS rule that
+   allows `GET` and `PUT` with header `content-type` from your app's origins.
+2. Create an R2 API token with Object Read & Write on that bucket.
+3. Put `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and
+   `R2_BUCKET` in `.env.local`.
 
-Sign-up and password reset use 6-digit codes typed into the app. The Supabase
-Auth templates (codes, plus "password changed" and "email changed" notices) are
-set by `node --env-file=.env.local scripts/auth-emails.mjs`; deploy the app first,
-since the emails no longer contain links.
+Without R2, everything works except attachments, which say storage isn't set up.
 
-### Demo data (development only)
+### 5. Deploy (Vercel)
 
-```bash
-npm run seed:demo                        # demo@example.com, password written to .env.local
-npm run seed:demo -- --add you@email.com # also make your account an owner of the demo org
-```
+Import the repository in Vercel, set these environment variables, and set the
+function region close to your database:
 
-The seed deletes and recreates the `arclight-demo` organization each run.
+| Variable | Needed for |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Everything |
+| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | Attachments (mark the keys Sensitive) |
+| `NEXT_PUBLIC_SITE_URL` | Your public address, for SEO and link previews |
+| `NEXT_PUBLIC_CONTACT_EMAIL`, `NEXT_PUBLIC_PORTFOLIO_URL`, `NEXT_PUBLIC_GITHUB_URL`, `NEXT_PUBLIC_SOURCE_URL` | The contact details on your landing page |
 
-## Scripts
+The app never needs the Supabase secret key at runtime; only scripts and tests use it.
+
+## Development
 
 | Command | What it does |
 |---|---|
 | `npm run dev` / `build` / `start` | Next.js |
 | `npm run typecheck` / `lint` | TypeScript, ESLint |
-| `npm test` | Unit tests + database security tests (real users against the real project, cleaned up after) |
-| `npm run test:e2e` | Browser tests (Playwright; starts the dev server on port 3100). First time: `npx playwright install chromium` |
-| `node --env-file=.env.local scripts/cleanup-tests.mjs` | Remove test data left behind by an interrupted run |
+| `npm test` | Unit tests and database security tests (throwaway users on the real project, cleaned up after) |
+| `npm run test:e2e` | Browser tests (Playwright on port 3100). First time: `npx playwright install chromium` |
 | `npm run db:push` | Apply new migrations |
-| `npm run db:sql -- -e "select 1"` | Run SQL (dev) |
-| `npm run seed:demo` | Demo organization |
+| `npm run db:sql -- -e "select 1"` | Run SQL |
+| `npm run seed:demo` | Demo organization (`-- --add you@email.com` makes you an owner of it) |
+| `node --env-file=.env.local scripts/cleanup-tests.mjs` | Remove test data left by an interrupted run |
+| `node --env-file=.env.local scripts/r2-cleanup.mjs --dry-run` | List R2 files no attachment references (the weekly workflow deletes them) |
 
-## Changing the database
+### Changing the database
 
 1. `npx supabase migration new <name>` and write the SQL.
-2. Every new table: `organization_id`, RLS enabled, explicit `grant ... to authenticated`
-   (new tables are not exposed to the API automatically), policies using the
-   `private.*` helpers.
+2. Every new table: `organization_id`, RLS enabled, explicit `grant ... to
+   authenticated` (new tables are not exposed automatically), and policies
+   built from the `private.*` helpers.
 3. `npm run db:push`, then `npx supabase db advisors --db-url "$SUPABASE_DB_URL"`.
-4. Regenerate types (Management API, see ARCHITECTURE.md §9) and add tests to `tests/rls.test.ts`.
+4. Regenerate `src/lib/database.types.ts` (see ARCHITECTURE.md §9) and add
+   tests to `tests/rls.test.ts`.
 
-## Continuous integration
+### Continuous integration
 
-`.github/workflows/ci.yml` runs on every push to `main` and every pull request:
-typecheck, lint, database security tests, then the browser tests against a
-production build. It needs three repository secrets (already set):
-`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
-`SUPABASE_SECRET_KEY`. The tests use the live project with throwaway users and
-organizations (`mso-t…`/`mso-e2e…@example.com`) that are deleted afterwards.
+`.github/workflows/ci.yml` runs typecheck, lint, the database security tests
+and the browser tests (against a production build) on every push and pull
+request. Pull requests from forks don't get repository secrets, so they run
+typecheck, lint and the unit tests only; a maintainer runs the rest.
 
-## Deploying to Vercel
+## Contributing
 
-Set the two `NEXT_PUBLIC_*` variables in the Vercel project (the secret key is
-not needed by the app). Set the function region to `bom1` (Mumbai) to sit next
-to the database, and add the Vercel URL to Supabase's redirect list.
+Issues and pull requests are welcome; start with [CONTRIBUTING.md](CONTRIBUTING.md).
+Found a security problem? Please report it privately: see [SECURITY.md](SECURITY.md).
+
+## License
+
+[GNU AGPL-3.0](LICENSE). You may use, change and self-host mso-pm. If you run a
+modified version as a service for other people, you must make your changes
+available to them under the same license.
+
+## Author
+
+Built by [Muhammed Shinan](https://mshinan.com) ·
+[GitHub](https://github.com/m-shinan) · [mshinan2002@gmail.com](mailto:mshinan2002@gmail.com)

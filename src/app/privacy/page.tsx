@@ -1,4 +1,4 @@
-import { CONTACT_EMAIL } from "@/features/landing/landing-page";
+import { CONTACT_EMAIL } from "@/lib/site";
 import { LegalPage } from "@/features/legal/legal-page";
 
 export const metadata = { title: "Privacy policy", description: "What mso-pm collects, why, who processes it, and the choices you have.", alternates: { canonical: "/privacy" } };

@@ -34,14 +34,21 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
+      # Pull requests from forks get no secrets: they run the unit tests only.
+      - name: Unit tests (no secrets)
+        if: env.SUPABASE_SECRET_KEY == ''
+        run: npx vitest run tests/unit.test.ts
       - name: Database security tests
+        if: env.SUPABASE_SECRET_KEY != ''
         run: npx vitest run
       - name: Install Chromium
+        if: env.SUPABASE_SECRET_KEY != ''
         run: npx playwright install --with-deps chromium
       - name: Browser tests
+        if: env.SUPABASE_SECRET_KEY != ''
         run: npx playwright test
       - name: Leftover test data
-        if: always()
+        if: always() && env.SUPABASE_SECRET_KEY != ''
         run: node scripts/cleanup-tests.mjs
       - uses: actions/upload-artifact@v7
         if: failure()

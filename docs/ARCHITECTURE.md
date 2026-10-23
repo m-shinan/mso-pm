@@ -1,7 +1,7 @@
 # mso-pm — architecture
 
 Status: **built**. Schema, RLS, auth and every screen are live against Supabase
-project `aaxeehcqqduuvxxtwzrl`. See §8 for what is intentionally not built yet.
+project `<project-ref>`. See §8 for what is intentionally not built yet.
 
 Design reference: https://claude.ai/artifact/Mmb594PjtmzfUSUxtsnMNA
 
@@ -32,7 +32,7 @@ refetching.
 Server actions are used where the server must do something the browser
 shouldn't: sign in/up/out, generating invitation tokens, search.
 
-**Supabase region:** `ap-south-1` (Mumbai), project ref `aaxeehcqqduuvxxtwzrl`.
+**Supabase region:** `ap-south-1` (Mumbai), project ref `<project-ref>`.
 Pin Vercel functions to `bom1` so server renders sit next to the database.
 
 ## 2. Routing and active organization

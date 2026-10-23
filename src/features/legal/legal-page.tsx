@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { CONTACT_EMAIL, PORTFOLIO_URL, SiteFooter, SiteLogo } from "@/features/landing/landing-page";
+import { SiteFooter, SiteLogo } from "@/features/landing/landing-page";
+import { CONTACT_EMAIL, PORTFOLIO_URL } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 export interface LegalSection {
@@ -58,7 +59,7 @@ export function LegalPage({
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-line bg-surface px-5 py-4">
             <span className="font-medium">Questions?</span>
             <a href={`mailto:${CONTACT_EMAIL}`} className="text-accent">{CONTACT_EMAIL}</a>
-            <a href={PORTFOLIO_URL} className="text-accent">mshinan.com</a>
+            <a href={PORTFOLIO_URL} className="text-accent">{PORTFOLIO_URL.replace(/^https?:\/\//, "")}</a>
           </div>
         </article>
       </div>

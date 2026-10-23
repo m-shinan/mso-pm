@@ -6,12 +6,12 @@ import { InstallAppButton } from "@/components/pwa";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { buttonClass } from "@/components/ui/button";
 import { HOME } from "@/lib/auth";
-import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
+import { CONTACT_EMAIL, GITHUB_URL, PORTFOLIO_URL, SITE_DESCRIPTION, SITE_NAME, SITE_URL, SOURCE_URL } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
-export const CONTACT_EMAIL = "mshinan2002@gmail.com";
-export const PORTFOLIO_URL = "https://mshinan.com";
-export const GITHUB_URL = "https://github.com/m-shinan";
+
+/** "https://example.org/x" → "example.org/x". */
+const bare = (url: string) => url.replace(/^https?:\/\//, "");
 
 /** GitHub's mark (lucide no longer ships brand logos). */
 function GithubIcon({ className }: { className?: string; strokeWidth?: number }) {
@@ -50,6 +50,10 @@ const FAQ = [
     a: "Yes. mso-pm is a free project management tool: create an account, start an organization and invite your team at no cost.",
   },
   {
+    q: "Is mso-pm open source?",
+    a: "Yes. The full source code is on GitHub under the AGPL-3.0 license: you can read it, suggest changes, or run your own copy.",
+  },
+  {
     q: "Who is it for?",
     a: "Software studios, agencies and product teams that run several projects and clients at once and want tasks, issues, releases and team chat in one place.",
   },
@@ -82,6 +86,9 @@ function jsonLd() {
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       featureList: FEATURES.map((f) => f.title),
       author: { "@type": "Person", url: PORTFOLIO_URL, sameAs: [PORTFOLIO_URL, GITHUB_URL] },
+      license: "https://www.gnu.org/licenses/agpl-3.0.html",
+      isAccessibleForFree: true,
+      codeRepository: SOURCE_URL,
     },
     {
       "@context": "https://schema.org",
@@ -178,7 +185,7 @@ export function LandingPage({ signedIn }: { signedIn: boolean }) {
               <span className="size-2.5 rounded-full bg-line" />
               <span className="size-2.5 rounded-full bg-line" />
               <span className="size-2.5 rounded-full bg-line" />
-              <span className="ml-3 truncate rounded-md bg-subtle px-3 py-0.5 font-mono text-xs text-ink-4">pm.mshinan.com/acme/projects/WEB</span>
+              <span className="ml-3 truncate rounded-md bg-subtle px-3 py-0.5 font-mono text-xs text-ink-4">{bare(SITE_URL)}/acme/projects/WEB</span>
             </div>
             <div className="flex">
               <div className="hidden w-[220px] shrink-0 flex-col gap-1 border-r border-line-soft bg-sunken px-3.5 py-4 text-base text-ink-2 md:flex">
@@ -296,8 +303,8 @@ export function LandingPage({ signedIn }: { signedIn: boolean }) {
             </div>
             <div className="flex min-w-0 flex-[1_1_360px] flex-col gap-3">
               <ContactCard href={`mailto:${CONTACT_EMAIL}`} icon={Mail} label="Email" value={CONTACT_EMAIL} />
-              <ContactCard href={PORTFOLIO_URL} icon={Globe} label="Portfolio" value="mshinan.com" />
-              <ContactCard href={GITHUB_URL} icon={GithubIcon} label="GitHub" value="github.com/m-shinan" />
+              <ContactCard href={PORTFOLIO_URL} icon={Globe} label="Portfolio" value={bare(PORTFOLIO_URL)} />
+              <ContactCard href={GITHUB_URL} icon={GithubIcon} label="GitHub" value={bare(GITHUB_URL)} />
             </div>
           </div>
         </section>
@@ -336,8 +343,8 @@ export function SiteFooter() {
           <Link href="/privacy" className="hover:text-ink">Privacy</Link>
           <Link href="/terms" className="hover:text-ink">Terms</Link>
           <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-ink">Contact</a>
-          <a href={PORTFOLIO_URL} className="hover:text-ink">mshinan.com</a>
-          <a href={GITHUB_URL} className="hover:text-ink">GitHub</a>
+          <a href={PORTFOLIO_URL} className="hover:text-ink">{bare(PORTFOLIO_URL)}</a>
+          <a href={SOURCE_URL} className="hover:text-ink">Source code</a>
         </nav>
       </div>
     </footer>

@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { SITE_URL } from "@/lib/site";
 
 // The preview card shown when a link to the site is shared (WhatsApp, Slack, X, LinkedIn…).
 // Served at /og.png: the extension keeps it outside the sign-in proxy, so crawlers can fetch it.
@@ -18,7 +19,7 @@ export function GET() {
           <div style={{ fontSize: 68, lineHeight: 1.08, letterSpacing: -2, maxWidth: 980 }}>Free project management for software teams</div>
           <div style={{ fontSize: 30, color: "#a1a1a1" }}>Boards, tasks, issues, releases, clients, docs and team chat.</div>
         </div>
-        <div style={{ display: "flex", fontSize: 26, color: "#8f8f8f" }}>pm.mshinan.com</div>
+        <div style={{ display: "flex", fontSize: 26, color: "#8f8f8f" }}>{new URL(SITE_URL).host}</div>
       </div>
     ),
     size,
