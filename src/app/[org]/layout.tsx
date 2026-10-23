@@ -11,6 +11,9 @@ import { listNotifications } from "@/features/misc/queries";
 import { getOrg, getOrgContext, listMyOrgs } from "@/features/org/queries";
 import { createClient, getUserId } from "@/lib/supabase/server";
 
+// Organization pages are private; keep them out of search results even if a link leaks.
+export const metadata = { robots: { index: false, follow: false } };
+
 export default async function OrgLayout({ children, params }: LayoutProps<"/[org]">) {
   const userId = await getUserId();
   if (!userId) redirect("/login");

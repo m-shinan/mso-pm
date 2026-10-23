@@ -1,7 +1,7 @@
 import { CONTACT_EMAIL } from "@/features/landing/landing-page";
 import { LegalPage } from "@/features/legal/legal-page";
 
-export const metadata = { title: "Privacy policy" };
+export const metadata = { title: "Privacy policy", description: "What mso-pm collects, why, who processes it, and the choices you have.", alternates: { canonical: "/privacy" } };
 
 // Plain-language starting point. Have it reviewed before relying on it legally.
 export default function PrivacyPage() {

@@ -1,14 +1,26 @@
 import { ArrowRight, Check, FileText, Flag, FolderKanban, Globe, Mail, ShieldCheck, TriangleAlert, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
+import type { ComponentType } from "react";
 import { InstallAppButton } from "@/components/pwa";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { buttonClass } from "@/components/ui/button";
 import { HOME } from "@/lib/auth";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 export const CONTACT_EMAIL = "mshinan2002@gmail.com";
 export const PORTFOLIO_URL = "https://mshinan.com";
+export const GITHUB_URL = "https://github.com/m-shinan";
+
+/** GitHub's mark (lucide no longer ships brand logos). */
+function GithubIcon({ className }: { className?: string; strokeWidth?: number }) {
+  return (
+    <svg aria-hidden viewBox="0 0 16 16" fill="currentColor" className={className}>
+      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+    </svg>
+  );
+}
 
 const FEATURES: { icon: LucideIcon; title: string; body: string }[] = [
   { icon: FolderKanban, title: "Projects & boards", body: "Board and list views with your own statuses, priorities and labels. Drag tasks between columns." },
@@ -31,6 +43,53 @@ const SECURITY = [
   "Email-confirmed accounts and single-use invitations",
   "Sign-ins expire after 30 days; delete your account any time",
 ];
+
+const FAQ = [
+  {
+    q: "Is mso-pm free?",
+    a: "Yes. mso-pm is a free project management tool: create an account, start an organization and invite your team at no cost.",
+  },
+  {
+    q: "Who is it for?",
+    a: "Software studios, agencies and product teams that run several projects and clients at once and want tasks, issues, releases and team chat in one place.",
+  },
+  {
+    q: "Can I manage more than one company or client workspace?",
+    a: "Yes. One login can belong to any number of organizations, each with its own projects, members and roles, and you switch between them from the sidebar.",
+  },
+  {
+    q: "Is my data private?",
+    a: "Each organization’s data is separated in the database itself with row-level security, roles control who can view or edit, and sign-ins expire after 30 days.",
+  },
+  {
+    q: "Does it work on my phone?",
+    a: "Yes. mso-pm works in any modern browser and can be installed as an app on Android, iPhone and desktop for quick access, with notifications as work happens.",
+  },
+];
+
+/** Structured data so search engines understand the page (a free web app, plus the FAQ). */
+function jsonLd() {
+  return [
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      name: SITE_NAME,
+      url: SITE_URL,
+      description: SITE_DESCRIPTION,
+      applicationCategory: "BusinessApplication",
+      applicationSubCategory: "Project management",
+      operatingSystem: "Web, Android, iOS, Windows, macOS",
+      offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+      featureList: FEATURES.map((f) => f.title),
+      author: { "@type": "Person", url: PORTFOLIO_URL, sameAs: [PORTFOLIO_URL, GITHUB_URL] },
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: FAQ.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+    },
+  ];
+}
 
 const BOARD = [
   { name: "Todo", dot: "bg-ink-5", cards: [["Write release notes", "WEB-41", "AR"], ["Cookie banner copy", "WEB-44", "JK"]] },
@@ -92,20 +151,21 @@ export function LandingPage({ signedIn }: { signedIn: boolean }) {
         <section className="mx-auto flex max-w-[1200px] flex-col items-center gap-5 px-4 pt-16 pb-10 text-center sm:px-6 sm:pt-22">
           <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-sm text-ink-2">
             <span aria-hidden className="size-[7px] rounded-full bg-success" />
-            Project management for software studios
+            Free project management for software teams
           </span>
           <h1 className="max-w-[820px] text-[38px] leading-[1.05] font-semibold tracking-[-0.035em] sm:text-[56px] lg:text-[64px]">
             Every project, task and release in one calm place.
           </h1>
           <p className="max-w-[620px] text-[17px] text-ink-3 sm:text-[18px]">
-            Plan work across all your organizations with one login. Track tasks, issues, releases, clients and docs, with roles
-            that decide who can see and change what.
+            A free project management tool for studios and software teams. Plan work across all your organizations with one
+            login: kanban boards, tasks, issues, releases, clients, docs and team chat, with roles that decide who can see and
+            change what.
           </p>
           <div className="mt-1 flex flex-wrap justify-center gap-3">
             {signedIn ? (
               <Link href={HOME} className={primary}>Go to your dashboard</Link>
             ) : (
-              <Link href="/signup" className={primary}>Create an account</Link>
+              <Link href="/signup" className={primary}>Create a free account</Link>
             )}
             <a href="#features" className={secondary}>See what’s inside</a>
             <InstallAppButton className={secondary} />
@@ -209,6 +269,21 @@ export function LandingPage({ signedIn }: { signedIn: boolean }) {
           </div>
         </section>
 
+        <section id="faq" aria-labelledby="faq-title" className="mx-auto max-w-[860px] scroll-mt-16 px-4 pb-20 sm:px-6 sm:pb-24">
+          <h2 id="faq-title" className="mb-8 text-[30px] leading-[1.1] font-semibold tracking-[-0.03em] sm:text-[38px]">Questions</h2>
+          <div className="flex flex-col divide-y divide-line rounded-xl border border-line bg-surface">
+            {FAQ.map((f) => (
+              <details key={f.q} className="group px-5 py-4 [&_summary::-webkit-details-marker]:hidden">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[16px] font-medium">
+                  {f.q}
+                  <span aria-hidden className="text-xl text-ink-4 transition-transform group-open:rotate-45">+</span>
+                </summary>
+                <p className="mt-2 text-[15px] text-ink-3">{f.a}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+
         <section id="contact" className="scroll-mt-16 border-t border-line bg-surface">
           <div className="mx-auto flex max-w-[1200px] flex-wrap items-start gap-x-16 gap-y-8 px-4 py-20 sm:px-6 sm:py-24">
             <div className="flex min-w-0 flex-[1_1_380px] flex-col gap-3">
@@ -222,17 +297,23 @@ export function LandingPage({ signedIn }: { signedIn: boolean }) {
             <div className="flex min-w-0 flex-[1_1_360px] flex-col gap-3">
               <ContactCard href={`mailto:${CONTACT_EMAIL}`} icon={Mail} label="Email" value={CONTACT_EMAIL} />
               <ContactCard href={PORTFOLIO_URL} icon={Globe} label="Portfolio" value="mshinan.com" />
+              <ContactCard href={GITHUB_URL} icon={GithubIcon} label="GitHub" value="github.com/m-shinan" />
             </div>
           </div>
         </section>
       </main>
 
+      <script
+        type="application/ld+json"
+        // JSON-LD; "<" is escaped so the content can never close the script tag.
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd()).replace(/</g, "\\u003c") }}
+      />
       <SiteFooter />
     </div>
   );
 }
 
-function ContactCard({ href, icon: Icon, label, value }: { href: string; icon: LucideIcon; label: string; value: string }) {
+function ContactCard({ href, icon: Icon, label, value }: { href: string; icon: ComponentType<{ className?: string; strokeWidth?: number }>; label: string; value: string }) {
   return (
     <a href={href} className="flex items-center gap-3.5 rounded-xl border border-line bg-sunken px-5 py-4 hover:border-line-strong">
       <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-[10px] bg-accent-soft text-accent-hover">
@@ -256,6 +337,7 @@ export function SiteFooter() {
           <Link href="/terms" className="hover:text-ink">Terms</Link>
           <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-ink">Contact</a>
           <a href={PORTFOLIO_URL} className="hover:text-ink">mshinan.com</a>
+          <a href={GITHUB_URL} className="hover:text-ink">GitHub</a>
         </nav>
       </div>
     </footer>

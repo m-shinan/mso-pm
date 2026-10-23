@@ -9,7 +9,7 @@ import { formatDate, timeAgo } from "@/lib/format";
 import { createClient, getUserId } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
-export const metadata = { title: "Admin console" };
+export const metadata = { title: "Admin console", robots: { index: false, follow: false } };
 
 const TABS = [
   { id: "overview", label: "Overview" },

@@ -6,7 +6,7 @@ import { listMyOrgs } from "@/features/org/queries";
 import { ArchivedOrgs } from "@/features/org/archived-orgs";
 import { createClient, getUserId } from "@/lib/supabase/server";
 
-export const metadata = { title: "Create organization" };
+export const metadata = { title: "Create organization", robots: { index: false, follow: false } };
 
 export default async function OnboardingPage() {
   if (!(await getUserId())) redirect("/login");

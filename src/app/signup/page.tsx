@@ -2,7 +2,7 @@ import Link from "next/link";
 import { signUp } from "@/features/auth/actions";
 import { AuthForm } from "@/features/auth/auth-form";
 
-export const metadata = { title: "Create account" };
+export const metadata = { title: "Create account", description: "Create a free mso-pm account: boards, tasks, issues, releases and team chat.", alternates: { canonical: "/signup" } };
 
 export default async function SignupPage({ searchParams }: PageProps<"/signup">) {
   const sp = await searchParams;

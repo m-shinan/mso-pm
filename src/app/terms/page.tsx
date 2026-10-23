@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { LegalPage } from "@/features/legal/legal-page";
 
-export const metadata = { title: "Terms of use" };
+export const metadata = { title: "Terms of use", description: "The terms for using mso-pm, the free project management tool.", alternates: { canonical: "/terms" } };
 
 // Plain-language starting point. Have it reviewed before relying on it legally.
 export default function TermsPage() {

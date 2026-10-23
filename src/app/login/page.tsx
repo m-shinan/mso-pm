@@ -2,7 +2,7 @@ import Link from "next/link";
 import { signIn } from "@/features/auth/actions";
 import { AuthForm } from "@/features/auth/auth-form";
 
-export const metadata = { title: "Sign in" };
+export const metadata = { title: "Sign in", description: "Sign in to mso-pm, the free project management tool for software teams.", alternates: { canonical: "/login" } };
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const sp = await searchParams;

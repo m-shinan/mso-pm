@@ -7,7 +7,7 @@ import { EmailPreferences } from "@/features/auth/email-preferences";
 import { HOME } from "@/lib/auth";
 import { createClient, getUserId } from "@/lib/supabase/server";
 
-export const metadata = { title: "Account settings" };
+export const metadata = { title: "Account settings", robots: { index: false, follow: false } };
 
 export default async function AccountPage() {
   const userId = await getUserId();

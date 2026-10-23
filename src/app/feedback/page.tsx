@@ -5,7 +5,7 @@ import { HOME } from "@/lib/auth";
 import { friendlyError } from "@/lib/errors";
 import { createClient, getUserId } from "@/lib/supabase/server";
 
-export const metadata = { title: "Feedback inbox" };
+export const metadata = { title: "Feedback inbox", robots: { index: false, follow: false } };
 
 /** Feature requests and issue reports from every user. Platform admins only; everyone else gets a 404. */
 export default async function FeedbackInboxPage() {

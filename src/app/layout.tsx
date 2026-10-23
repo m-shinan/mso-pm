@@ -3,15 +3,32 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { PwaSetup } from "@/components/pwa";
 import { Toaster } from "@/components/ui/toast";
+import { SITE_DESCRIPTION, SITE_KEYWORDS, SITE_NAME, SITE_TITLE, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: { default: "mso-pm", template: "%s · mso-pm" },
-  description: "Projects, tasks, issues and releases across your organizations.",
-  applicationName: "mso-pm",
+  metadataBase: new URL(SITE_URL),
+  title: { default: SITE_TITLE, template: "%s · mso-pm" },
+  description: SITE_DESCRIPTION,
+  keywords: SITE_KEYWORDS,
+  applicationName: SITE_NAME,
+  category: "productivity",
+  creator: "mshinan.com",
+
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    url: "/",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    locale: "en_US",
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "mso-pm: free project management tool for software teams" }],
+  },
+  twitter: { card: "summary_large_image", title: SITE_TITLE, description: SITE_DESCRIPTION, images: ["/og.png"] },
+  formatDetection: { telephone: false },
   // Opened from the iPhone Home Screen: full screen, app name under the icon.
   appleWebApp: { capable: true, title: "mso-pm", statusBarStyle: "default" },
 };
