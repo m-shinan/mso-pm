@@ -9,11 +9,12 @@ export interface Crumb {
 
 /**
  * Desktop top bar. The organization is always the first crumb so it is never
- * ambiguous which company's data is on screen.
+ * ambiguous which company's data is on screen. It stays at the top while the
+ * page under it scrolls.
  */
 export function PageHeader({ orgName, crumbs, actions }: { orgName: string; crumbs: Crumb[]; actions?: ReactNode }) {
   return (
-    <header className="hidden h-[52px] shrink-0 items-center justify-between border-b border-line bg-surface px-8 lg:flex">
+    <header className="sticky top-0 z-20 hidden h-[52px] shrink-0 items-center justify-between border-b border-line bg-surface px-8 lg:flex">
       <nav aria-label="Breadcrumb">
         <ol className="flex items-center gap-2 text-base">
           <li className="text-ink-3">{orgName}</li>
