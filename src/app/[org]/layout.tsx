@@ -52,7 +52,7 @@ export default async function OrgLayout({ children, params }: LayoutProps<"/[org
           {children}
         </div>
       </div>
-      <MobileBottomNav />
+      <MobileBottomNav chatUnread={chatUnread} />
       <CommandPalette />
       <QuickCreate />
       </LiveNotificationsProvider>

@@ -202,7 +202,8 @@ export function ChatApp({ initialChannels, initialChannelId }: { initialChannels
   ];
 
   return (
-    <div className="flex min-h-0 grow lg:h-[calc(100dvh-52px)]">
+    // Phones: fits between the top bar (60px) and the bottom navigation (72px), so the message box stays in view.
+    <div className="flex h-[calc(100dvh-132px-env(safe-area-inset-bottom))] min-h-0 grow lg:h-[calc(100dvh-52px)]">
       <aside
         aria-label="Conversations"
         className={cn("w-full shrink-0 flex-col overflow-y-auto border-line bg-surface lg:flex lg:w-[280px] lg:border-r", mobileOpen ? "hidden" : "flex")}

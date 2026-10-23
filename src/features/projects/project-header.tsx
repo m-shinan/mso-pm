@@ -106,11 +106,12 @@ export function ProjectHeader({ project }: { project: ProjectDetail }) {
       </div>
 
       <dl className="flex flex-wrap gap-x-8 gap-y-3 text-sm">
-        <div className="flex flex-col gap-1">
+        {/* Phones show priority and progress only; the rest is under Edit project. */}
+        <div className="flex flex-col gap-1 max-lg:hidden">
           <dt className="text-xs text-ink-4">Client</dt>
           <dd>{project.client ? <Link href={href(`/clients?client=${project.client.id}`)} className="text-accent hover:text-accent-hover">{project.client.name}</Link> : "Internal"}</dd>
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1 max-lg:hidden">
           <dt className="text-xs text-ink-4">Type</dt>
           <dd>{config.get(project.typeId)?.name}</dd>
         </div>

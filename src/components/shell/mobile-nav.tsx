@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bug, Folder, LayoutGrid, Menu as MenuIcon, Plus, Search, ShieldCheck } from "lucide-react";
+import { Folder, LayoutGrid, Menu as MenuIcon, MessagesSquare, Plus, Search, ShieldCheck } from "lucide-react";
 import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/ui/menu";
 import { AccountMenu } from "./account-menu";
 import { NotificationBell } from "./notification-bell";
@@ -30,25 +30,34 @@ export function MobileTopBar() {
   );
 }
 
-/** Phone bottom navigation. "More" holds the sections that don't fit. */
-export function MobileBottomNav() {
+/** Phone bottom navigation: the four most-used places plus Create. "More" holds the rest. */
+export function MobileBottomNav({ chatUnread = 0 }: { chatUnread?: number }) {
   const { org, href, isPlatformAdmin } = useOrg();
   const pathname = usePathname();
   const router = useRouter();
-  const tab = (path: string, label: string, Icon: typeof Folder) => {
+  const tab = (path: string, label: string, Icon: typeof Folder, badge = 0) => {
     const active = isActive(pathname, org.slug, path);
     return (
       <Link
         href={href(path)}
         aria-current={active ? "page" : undefined}
+        aria-label={badge ? `${label}, ${badge} unread` : undefined}
         className={cn("flex h-[52px] flex-col items-center justify-center gap-[3px] text-2xs", active ? "font-medium text-ink" : "text-ink-4")}
       >
-        <Icon aria-hidden className="size-[22px]" strokeWidth={1.8} />
+        <span className="relative">
+          <Icon aria-hidden className="size-[22px]" strokeWidth={1.8} />
+          {badge ? (
+            <span aria-hidden className="absolute -top-1.5 -right-2.5 min-w-[18px] rounded-full bg-accent px-1 text-center text-[10px] leading-[18px] font-semibold text-white tabular">
+              {badge > 99 ? "99+" : badge}
+            </span>
+          ) : null}
+        </span>
         {label}
       </Link>
     );
   };
-  const more = [...PRIMARY_NAV.slice(1), ...WORKSPACE_NAV.filter((i) => !["/projects", "/issues"].includes(i.path)), SETTINGS_NAV];
+  const inBar = ["", "/projects", "/chat"];
+  const more = [...PRIMARY_NAV, ...WORKSPACE_NAV, SETTINGS_NAV].filter((i) => !inBar.includes(i.path));
 
   return (
     <nav
@@ -60,7 +69,7 @@ export function MobileBottomNav() {
       <button type="button" aria-label="Create" onClick={() => openCreate()} className="inline-flex size-12 items-center justify-center justify-self-center rounded-[14px] bg-accent text-white">
         <Plus aria-hidden className="size-[22px]" strokeWidth={2.2} />
       </button>
-      {tab("/issues", "Issues", Bug)}
+      {tab("/chat", "Chat", MessagesSquare, chatUnread)}
       <Menu>
         <MenuTrigger className="flex h-[52px] flex-col items-center justify-center gap-[3px] text-2xs text-ink-4">
           <MenuIcon aria-hidden className="size-[22px]" strokeWidth={1.8} />
