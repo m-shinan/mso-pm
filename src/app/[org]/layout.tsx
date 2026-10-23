@@ -2,9 +2,11 @@ import { notFound, redirect } from "next/navigation";
 import { CommandPalette } from "@/components/shell/command-palette";
 import { LiveRefresh } from "@/components/shell/live-refresh";
 import { MobileBottomNav, MobileTopBar } from "@/components/shell/mobile-nav";
+import { NotificationPopups } from "@/components/shell/notification-popups";
 import { OrgProvider } from "@/components/shell/org-provider";
 import { QuickCreate } from "@/components/shell/quick-create";
 import { Sidebar } from "@/components/shell/sidebar";
+import { chatUnreadTotal } from "@/features/chat/queries";
 import { getDashboard } from "@/features/dashboard/queries";
 import { listNotifications } from "@/features/misc/queries";
 import { getOrg, getOrgContext, listMyOrgs } from "@/features/org/queries";
@@ -22,11 +24,12 @@ export default async function OrgLayout({ children, params }: LayoutProps<"/[org
     notFound();
   }
 
-  const [orgs, data, summary, notifications] = await Promise.all([
+  const [orgs, data, summary, notifications, chatUnread] = await Promise.all([
     listMyOrgs(),
     getOrgContext(org.id),
     getDashboard(org.id),
     listNotifications(org.id),
+    chatUnreadTotal(org.id),
   ]);
 
   const counts = {
@@ -34,6 +37,7 @@ export default async function OrgLayout({ children, params }: LayoutProps<"/[org
     projects: data.projects.length,
     openIssues: summary.stats.openIssues,
     criticalIssues: summary.stats.criticalIssues,
+    chatUnread,
   };
 
   return (
@@ -49,6 +53,7 @@ export default async function OrgLayout({ children, params }: LayoutProps<"/[org
       <CommandPalette />
       <QuickCreate />
       <LiveRefresh channel={`inbox:${userId}`} sources={[{ table: "notifications", filter: `user_id=eq.${userId}` }]} />
+      <NotificationPopups userId={userId} />
     </OrgProvider>
   );
 }

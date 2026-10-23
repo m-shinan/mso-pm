@@ -21,6 +21,7 @@ export function friendlyError(error: unknown, action = "save this"): string {
     case "23503":
       return "It’s still in use, so it can’t be removed. Archive it instead.";
     case "23514":
+      if (msg.includes("only owner of")) return msg;
       if (msg.includes("owner")) return "An organization needs at least one owner.";
       if (msg.includes("loop")) return "That would create a dependency loop.";
       return "Some of the values aren’t valid. Check the form and try again.";
@@ -34,6 +35,7 @@ export function friendlyError(error: unknown, action = "save this"): string {
     case "28000":
       return "Your session ended. Sign in again.";
     case "54000":
+      if (msg.includes("feedback")) return msg;
       return "You’ve reached the limit for this.";
     case "PGRST116":
       return "Not found, or you don’t have access.";

@@ -17,7 +17,15 @@ export default async function SignupPage({ searchParams }: PageProps<"/signup">)
         newPassword
         submit="Create account"
         next={next}
-        footer={<>Already have an account? <Link href="/login" className="text-accent">Sign in</Link></>}
+        footer={
+          <div className="flex flex-col gap-2">
+            <span>Already have an account? <Link href="/login" className="text-accent">Sign in</Link></span>
+            <span className="text-xs text-ink-4">
+              By creating an account you agree to the <Link href="/terms" className="underline hover:text-ink">Terms</Link> and{" "}
+              <Link href="/privacy" className="underline hover:text-ink">Privacy policy</Link>.
+            </span>
+          </div>
+        }
       />
     </div>
   );

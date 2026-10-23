@@ -9,10 +9,10 @@ export default function ResetPasswordPage() {
     <div className="flex min-h-dvh items-center justify-center px-4 py-10">
       <AuthForm
         title="Reset your password"
-        subtitle="We’ll email you a link to set a new one."
+        subtitle="We’ll email you a code to set a new one."
         action={requestPasswordReset}
         fields={["email"]}
-        submit="Send reset link"
+        submit="Send code"
         footer={<Link href="/login" className="text-accent">Back to sign in</Link>}
       />
     </div>

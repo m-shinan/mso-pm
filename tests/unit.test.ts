@@ -1,6 +1,7 @@
 // Pure logic: status glyphs from categories, due labels, activity sentences, errors, permissions.
 import { describe, expect, it } from "vitest";
 import { describeActivity } from "@/lib/activity";
+import { HOME, safeNext, SESSION_MAX_AGE_SECONDS, sessionExpired } from "@/lib/auth";
 import { friendlyError } from "@/lib/errors";
 import { daysFromToday, dueLabel, formatDate, percent } from "@/lib/format";
 import { buildConfig } from "@/lib/options";
@@ -100,5 +101,33 @@ describe("people and permissions", () => {
     expect(can(["tasks.update"], "tasks.update")).toBe(true);
     expect(can(["tasks.update"], "tasks.delete")).toBe(false);
     expect(new Set(PERMISSIONS).size).toBe(PERMISSIONS.length);
+  });
+});
+
+describe("redirects after sign-in stay inside the app", () => {
+  it("keeps in-app paths with their query and hash", () => {
+    expect(safeNext("/acme/projects?tab=open#top")).toBe("/acme/projects?tab=open#top");
+  });
+  it("rejects anything that a browser would send off-site", () => {
+    for (const bad of ["//evil.com", "/\\evil.com", "/\t/evil.com", "/\n/evil.com", "https://evil.com", "evil.com", "", null, undefined]) {
+      expect(safeNext(bad), String(bad)).toBe(HOME);
+    }
+  });
+});
+
+describe("sessions end 30 days after sign-in", () => {
+  const now = 1_800_000_000;
+  const signedIn = (secondsAgo: number) => ({ amr: [{ method: "password", timestamp: now - secondsAgo }] });
+  it("keeps a session inside the window and ends one past it", () => {
+    expect(sessionExpired(signedIn(SESSION_MAX_AGE_SECONDS - 60), now)).toBe(false);
+    expect(sessionExpired(signedIn(SESSION_MAX_AGE_SECONDS + 60), now)).toBe(true);
+  });
+  it("counts from the first sign-in method, not a later MFA step", () => {
+    const claims = { amr: [{ method: "totp", timestamp: now - 60 }, { method: "password", timestamp: now - SESSION_MAX_AGE_SECONDS - 60 }] };
+    expect(sessionExpired(claims, now)).toBe(true);
+  });
+  it("leaves tokens without amr alone", () => {
+    expect(sessionExpired({}, now)).toBe(false);
+    expect(sessionExpired(undefined, now)).toBe(false);
   });
 });

@@ -7,6 +7,7 @@ import {
   FileText,
   Folder,
   LayoutGrid,
+  MessagesSquare,
   SlidersHorizontal,
   Tag,
   Users,
@@ -22,6 +23,7 @@ export interface NavItem {
 export const PRIMARY_NAV: NavItem[] = [
   { path: "", label: "Dashboard", icon: LayoutGrid },
   { path: "/my-tasks", label: "My tasks", icon: CircleCheck },
+  { path: "/chat", label: "Chat", icon: MessagesSquare },
   { path: "/calendar", label: "Calendar", icon: CalendarDays },
   { path: "/activity", label: "Activity", icon: Activity },
 ];

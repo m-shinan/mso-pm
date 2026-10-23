@@ -16,6 +16,7 @@ export interface NavCounts {
   projects: number;
   openIssues: number;
   criticalIssues: number;
+  chatUnread: number;
 }
 
 function NavLink({ item, count, extra }: { item: NavItem; count?: number; extra?: React.ReactNode }) {
@@ -61,7 +62,12 @@ export function Sidebar({ counts }: { counts: NavCounts }) {
 
       <nav aria-label="Main" className="flex min-h-0 grow flex-col gap-0.5 overflow-y-auto px-3 py-1">
         {PRIMARY_NAV.map((item) => (
-          <NavLink key={item.path} item={item} count={item.path === "/my-tasks" ? counts.myTasks : undefined} />
+          <NavLink
+            key={item.path}
+            item={item}
+            count={item.path === "/my-tasks" ? counts.myTasks : undefined}
+            extra={item.path === "/chat" && counts.chatUnread ? <Count>{counts.chatUnread}</Count> : undefined}
+          />
         ))}
         <p className="px-2.5 pt-4 pb-1.5 text-xs font-medium text-ink-4">Workspace</p>
         {WORKSPACE_NAV.map((item) => (

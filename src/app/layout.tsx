@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/toast";
@@ -31,6 +32,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-dvh">
         <Toaster>{children}</Toaster>
+        {/* Cookieless page views; only collects once Web Analytics is enabled for the Vercel project. */}
+        <Analytics />
       </body>
     </html>
   );

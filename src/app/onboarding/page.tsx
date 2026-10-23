@@ -17,7 +17,7 @@ export default async function OnboardingPage() {
     <div className="flex min-h-dvh flex-col items-center px-4 pb-10">
       <div className="flex h-14 items-center self-stretch lg:px-4">
         {orgs.length ? (
-          <Link href="/" className="flex items-center gap-1.5 text-sm text-ink-2 hover:text-ink">
+          <Link href="/app" className="flex items-center gap-1.5 text-sm text-ink-2 hover:text-ink">
             <ChevronLeft aria-hidden className="size-4" />
             Back
           </Link>

@@ -41,6 +41,44 @@ also go out by email through [Resend](https://resend.com) (free tier: 3,000/mont
 Nothing is sent until this is done. `scripts/email-setup.mjs --off` turns it off again.
 Each person can switch emails off in the account menu.
 
+### Feedback inbox
+
+"Request a feature" and "Report an issue" (account menu) save to the `feedback`
+table. Senders can't read it back; only platform admins can, at `/feedback`,
+and each new item is emailed to them through the same Resend settings. Admins
+are listed by email in `private.platform_admins` (seeded with the owner's address):
+
+```bash
+npm run db:sql -- -e "insert into private.platform_admins values ('someone@example.org')"
+```
+
+Each person can send 5 items an hour. Senders on `@example.com` (the test suites) are not emailed.
+
+### Admin console
+
+Platform admins (above) also get `/admin`: usage numbers, every account and
+organization (metadata only, never their content), suspend / restore / delete
+accounts, archive organizations, recent email deliveries, and an audit log of
+every admin action.
+
+### Chat and notifications
+
+Each organization has a General channel, a channel per project (whoever can
+read the project), named groups, and direct messages, all live over Realtime.
+Notifications pop up in the corner with a chime (per-device switch in the
+account menu) and are emailed per category (Account settings). Reviews follow
+task status: a status whose name contains "review" asks owners, admins and
+project managers to review; leaving it tells the assignee it was approved or
+needs changes. Deadline reminders run hourly via `pg_cron` and fire at 08:00 in
+each organization's timezone.
+
+### Sign-in emails
+
+Sign-up and password reset use 6-digit codes typed into the app. The Supabase
+Auth templates (codes, plus "password changed" and "email changed" notices) are
+set by `node --env-file=.env.local scripts/auth-emails.mjs`; deploy the app first,
+since the emails no longer contain links.
+
 ### Demo data (development only)
 
 ```bash

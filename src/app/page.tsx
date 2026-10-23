@@ -1,12 +1,12 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { listMyOrgs } from "@/features/org/queries";
+import type { Metadata } from "next";
+import { LandingPage } from "@/features/landing/landing-page";
+import { getUserId } from "@/lib/supabase/server";
 
-/** Send the user to their last organization, or to onboarding if they have none. */
+export const metadata: Metadata = {
+  title: { absolute: "mso-pm · Project management for software studios" },
+  description: "Plan projects, tasks, issues, releases, clients and docs across all your organizations with one login.",
+};
+
 export default async function Home() {
-  const orgs = await listMyOrgs();
-  if (orgs.length === 0) redirect("/onboarding");
-  const last = (await cookies()).get("last_org")?.value;
-  const target = orgs.find((o) => o.slug === last) ?? orgs[0];
-  redirect(`/${target.slug}`);
+  return <LandingPage signedIn={Boolean(await getUserId())} />;
 }

@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useActionState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { ErrorState } from "@/components/ui/states";
 import type { AuthState } from "./actions";
+import { VerifyCodeForm } from "./verify-code";
 
 type FieldName = "name" | "email" | "password" | "confirm";
 
@@ -40,6 +42,8 @@ export function AuthForm({
 }) {
   const [state, formAction, pending] = useActionState(action, {});
 
+  if (state.verify) return <VerifyCodeForm initial={{ ...state, verify: state.verify }} />;
+
   if (state.notice) {
     return (
       <div className="flex w-full max-w-[380px] flex-col gap-3 rounded-xl border border-line bg-surface p-6">
@@ -68,16 +72,13 @@ export function AuthForm({
             label={name === "password" && aside ? <span className="flex w-full justify-between">{f.label}{aside}</span> : f.label}
             error={name === "confirm" ? undefined : err}
           >
-            {(p) => (
-              <Input
-                {...p}
-                name={name}
-                type={f.type}
-                inputMode={f.inputMode}
-                autoComplete={newPassword && name === "password" ? "new-password" : f.autoComplete}
-                required
-              />
-            )}
+            {(p) =>
+              f.type === "password" ? (
+                <PasswordInput {...p} name={name} autoComplete={newPassword && name === "password" ? "new-password" : f.autoComplete} required />
+              ) : (
+                <Input {...p} name={name} type={f.type} inputMode={f.inputMode} autoComplete={f.autoComplete} required />
+              )
+            }
           </Field>
         );
       })}

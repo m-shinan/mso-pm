@@ -1,6 +1,7 @@
 // Tenant isolation and role permissions, enforced by the database.
 // Every assertion runs through the public API as a real signed-in user.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import pg from "pg";
 import { PERMISSIONS } from "@/lib/permissions";
 import { admin, anon, cleanup, makeUser, ok, ran, RUN, sha256, token, type TestUser } from "./helpers";
 
@@ -433,5 +434,229 @@ describe("live updates and email preference", () => {
     expect(ok(await admin.from("profiles").select("email_notifications").eq("id", dev.id).single(), "read").email_notifications).toBe(false);
     ran(await dev.client.from("profiles").update({ email_notifications: false }).eq("id", pm.id), "other");
     expect(ok(await admin.from("profiles").select("email_notifications").eq("id", pm.id).single(), "read").email_notifications).toBe(true);
+  });
+});
+
+describe("security review fixes", () => {
+  it("inviters can only grant roles within their own permissions", async () => {
+    const asAdmin = await pm.client.from("invitations").insert({
+      organization_id: org.A, email: `pm-admin-${RUN}@example.com`, role_id: await roleId(org.A, "admin"), token_hash: sha256(token()), invited_by: pm.id,
+    });
+    expect(asAdmin.error).not.toBeNull();
+    ran(await pm.client.from("invitations").insert({
+      organization_id: org.A, email: `pm-dev-${RUN}@example.com`, role_id: await roleId(org.A, "developer"), token_hash: sha256(token()), invited_by: pm.id,
+    }), "pm invites a developer");
+  });
+
+  it("an invitation cannot undo a deactivation", async () => {
+    ran(await admin.from("organization_members").insert({
+      organization_id: org.B, user_id: outsider.id, role_id: await roleId(org.B, "developer"), status: "deactivated",
+    }), "deactivated member");
+    const t = token();
+    ran(await ownerB.client.from("invitations").insert({
+      organization_id: org.B, email: outsider.email, role_id: await roleId(org.B, "developer"), token_hash: sha256(t), invited_by: ownerB.id,
+    }), "invite");
+    expect((await outsider.client.rpc("accept_invitation", { p_token: t })).error).not.toBeNull();
+    const row = ok(await admin.from("organization_members").select("status").eq("organization_id", org.B).eq("user_id", outsider.id).single(), "row");
+    expect(row.status).toBe("deactivated");
+    ran(await admin.from("organization_members").delete().eq("organization_id", org.B).eq("user_id", outsider.id), "cleanup");
+  });
+
+  it("a comment can be edited but not moved to another organization", async () => {
+    const task = ok(await newTask(both, "A", project.P1, "commented"), "task");
+    const comment = ok(await both.client.from("comments").insert({
+      organization_id: org.A, project_id: project.P1, task_id: task.id, author_id: both.id, body: "hello",
+    }).select("id").single(), "comment");
+    const bTask = ok(await newTask(ownerB, "B", project.B1, "target"), "b task");
+    const moved = await both.client.from("comments").update({ organization_id: org.B, project_id: project.B1, task_id: bTask.id }).eq("id", comment.id);
+    expect(moved.error).not.toBeNull();
+    ran(await both.client.from("comments").update({ body: "edited", edited_at: new Date().toISOString() }).eq("id", comment.id), "edit");
+  });
+
+  it("a project membership cannot be handed to a different user", async () => {
+    const res = await pm.client.from("project_members").update({ user_id: pm.id }).eq("project_id", project.P1).eq("user_id", both.id);
+    expect(res.error).not.toBeNull();
+  });
+
+  it("a project cannot move to another organization", async () => {
+    const res = await owner.client.from("projects").update({ organization_id: org.B }).eq("id", project.P2);
+    expect(res.error).not.toBeNull();
+  });
+});
+
+describe("feedback, account deletion and reserved slugs", () => {
+  const feedback = (user: TestUser, subject: string) =>
+    user.client.from("feedback").insert({ kind: "feature", subject, body: "A test message from the suite.", organization_id: org.A });
+
+  afterAll(async () => {
+    await admin.from("feedback").delete().in("user_id", [dev.id, viewer.id]);
+  });
+
+  it("anyone can send feedback, but only platform admins can read it", async () => {
+    ran(await feedback(dev, "Export to CSV"), "send");
+    expect(ok(await dev.client.from("feedback").select("id"), "read back")).toHaveLength(0);
+    expect(ok(await owner.client.from("feedback").select("id"), "owner reads")).toHaveLength(0);
+    expect(ok(await dev.client.rpc("is_platform_admin"), "admin?")).toBe(false);
+    const row = ok(await admin.from("feedback").select("user_id, user_email, organization_name").eq("user_id", dev.id).limit(1).single(), "row");
+    expect(row.user_email).toBe(dev.email);
+    expect(row.organization_name).toBe(`A ${RUN}`);
+  });
+
+  it("feedback can't be sent as someone else or into another organization", async () => {
+    const spoof = await dev.client.from("feedback").insert({ kind: "issue", subject: "x", body: "spoofed sender test", user_id: owner.id });
+    expect(spoof.error).not.toBeNull();
+    const otherOrg = await dev.client.from("feedback").insert({ kind: "issue", subject: "x", body: "wrong organization", organization_id: org.B });
+    expect(otherOrg.error).not.toBeNull();
+  });
+
+  it("a sixth message within an hour is refused", async () => {
+    for (let i = 1; i <= 5; i++) ran(await feedback(viewer, `Idea ${i}`), `send ${i}`);
+    const sixth = await feedback(viewer, "Idea 6");
+    expect(sixth.error?.code).toBe("54000");
+  });
+
+  it("organization URLs can't take a route the app uses", async () => {
+    const res = await outsider.client.rpc("create_organization", { p_name: "Clash", p_slug: "feedback" });
+    expect(res.error).not.toBeNull();
+  });
+
+  it("the only owner of an organization can't delete their account", async () => {
+    const res = await owner.client.rpc("delete_my_account");
+    expect(res.error?.message).toMatch(/only owner/);
+    expect((await admin.auth.admin.getUserById(owner.id)).data.user).not.toBeNull();
+  });
+
+  it("anyone else can delete their own account, and it is gone", async () => {
+    const leaving = await makeUser("leaving");
+    ran(await leaving.client.rpc("delete_my_account"), "delete");
+    expect((await admin.auth.admin.getUserById(leaving.id)).data.user).toBeNull();
+  });
+});
+
+describe("chat", () => {
+  const channel = async (user: TestUser, kind: string, projectId?: string) => {
+    let q = user.client.from("chat_channels").select("id").eq("organization_id", org.A).eq("kind", kind);
+    if (projectId) q = q.eq("project_id", projectId);
+    return ok(await q, `${kind} channel`);
+  };
+
+  it("every member sees the organization's General channel; outsiders see nothing", async () => {
+    expect(await channel(dev, "general")).toHaveLength(1);
+    expect(ok(await outsider.client.from("chat_channels").select("id"), "outsider")).toHaveLength(0);
+    expect(ok(await ownerB.client.from("chat_channels").select("id").eq("organization_id", org.A), "other org")).toHaveLength(0);
+  });
+
+  it("project channels follow who can read the project", async () => {
+    expect(await channel(dev, "project", project.P1)).toHaveLength(1);
+    expect(await channel(dev, "project", project.P2)).toHaveLength(0);
+    expect(await channel(pm, "project", project.P2)).toHaveLength(1);
+  });
+
+  it("messages reach channel members only, and can't be sent as someone else or into another organization", async () => {
+    const [general] = await channel(dev, "general");
+    ran(await dev.client.from("chat_messages").insert({ organization_id: org.A, channel_id: general.id, body: "Morning all" }), "post");
+    expect(ok(await viewer.client.from("chat_messages").select("body").eq("channel_id", general.id), "read")).toEqual([{ body: "Morning all" }]);
+    expect(ok(await outsider.client.from("chat_messages").select("id"), "outsider read")).toHaveLength(0);
+    const intrude = await ownerB.client.from("chat_messages").insert({ organization_id: org.A, channel_id: general.id, body: "hi" });
+    expect(intrude.error).not.toBeNull();
+    const spoof = await dev.client.from("chat_messages").insert({ organization_id: org.A, channel_id: general.id, body: "x", author_id: owner.id });
+    expect(spoof.error).not.toBeNull();
+  });
+
+  it("direct messages are private to the two people and notify the other once", async () => {
+    const id = ok(await dev.client.rpc("open_direct_chat", { p_org: org.A, p_user: viewer.id }), "open");
+    expect(ok(await viewer.client.rpc("open_direct_chat", { p_org: org.A, p_user: dev.id }), "same chat")).toBe(id);
+    ran(await dev.client.from("chat_messages").insert({ organization_id: org.A, channel_id: id, body: "Got a minute?" }), "dm 1");
+    ran(await dev.client.from("chat_messages").insert({ organization_id: org.A, channel_id: id, body: "About WEB-37" }), "dm 2");
+    expect(ok(await pm.client.from("chat_messages").select("id").eq("channel_id", id), "pm")).toHaveLength(0);
+    const notes = ok(await admin.from("notifications").select("id").eq("user_id", viewer.id).eq("kind", "chat_message").eq("entity_id", id), "notes");
+    expect(notes).toHaveLength(1);
+
+    const overview = ok(await viewer.client.rpc("chat_overview", { p_org: org.A }), "overview");
+    expect(overview.find((c: { id: string; unread: number }) => c.id === id)?.unread).toBe(2);
+    ran(await viewer.client.rpc("mark_chat_read", { p_channel: id }), "read");
+    const after = ok(await viewer.client.rpc("chat_overview", { p_org: org.A }), "overview after");
+    expect(after.find((c: { id: string; unread: number }) => c.id === id)?.unread).toBe(0);
+
+    expect((await dev.client.rpc("open_direct_chat", { p_org: org.A, p_user: outsider.id })).error).not.toBeNull();
+  });
+
+  it("groups only take members of the organization", async () => {
+    const id = ok(await dev.client.rpc("create_group_chat", { p_org: org.A, p_name: "Launch", p_members: [viewer.id, outsider.id] }), "group");
+    const people = ok(await dev.client.from("chat_members").select("user_id").eq("channel_id", id), "members").map((m) => m.user_id);
+    expect(people.sort()).toEqual([dev.id, viewer.id].sort());
+    expect(ok(await pm.client.from("chat_channels").select("id").eq("id", id), "pm")).toHaveLength(0);
+    ran(await viewer.client.from("chat_members").delete().eq("channel_id", id).eq("user_id", viewer.id), "leave");
+    expect(ok(await viewer.client.from("chat_channels").select("id").eq("id", id), "after leaving")).toHaveLength(0);
+  });
+});
+
+describe("review and project notifications", () => {
+  const notes = async (userId: string, kind: string, entity: string) =>
+    ok(await admin.from("notifications").select("title").eq("user_id", userId).eq("kind", kind).eq("entity_id", entity), kind);
+
+  it("moving a task into Review asks owners, admins and project managers; finishing it tells the assignee", async () => {
+    const task = ok(await newTask(owner, "A", project.P1, "Review me", { assignee_id: dev.id }), "task");
+    ran(await dev.client.from("tasks").update({ status_id: opt.A["task_status:Review"] }).eq("id", task.id), "to review");
+    expect(await notes(owner.id, "review_requested", task.id)).toHaveLength(1);
+    expect(await notes(pm.id, "review_requested", task.id)).toHaveLength(1);
+    expect(await notes(viewer.id, "review_requested", task.id)).toHaveLength(0);
+
+    ran(await owner.client.from("tasks").update({ status_id: opt.A["task_status:In progress"] }).eq("id", task.id), "send back");
+    expect(await notes(dev.id, "changes_requested", task.id)).toHaveLength(1);
+
+    ran(await dev.client.from("tasks").update({ status_id: opt.A["task_status:Review"] }).eq("id", task.id), "review again");
+    ran(await owner.client.from("tasks").update({ status_id: opt.A["task_status:Done"] }).eq("id", task.id), "approve");
+    expect(await notes(dev.id, "review_approved", task.id)).toHaveLength(1);
+  });
+
+  it("the inviter hears when an invitation is accepted", async () => {
+    const rows = ok(await admin.from("notifications").select("title").eq("user_id", owner.id).eq("kind", "invite_accepted"), "accepted");
+    expect(rows.length).toBeGreaterThan(0);
+  });
+
+  it("email categories default on, except chat", async () => {
+    const p = ok(
+      await dev.client.from("profiles").select("email_assignments, email_reviews, email_deadlines, email_comments, email_projects, email_chat").eq("id", dev.id).single(),
+      "prefs",
+    );
+    expect(p).toEqual({ email_assignments: true, email_reviews: true, email_deadlines: true, email_comments: true, email_projects: true, email_chat: false });
+  });
+});
+
+describe("admin console", () => {
+  const db = () => new pg.Client({ connectionString: process.env.SUPABASE_DB_URL, ssl: { rejectUnauthorized: false } });
+
+  it("refuses everyone who is not a platform admin", async () => {
+    expect((await owner.client.rpc("admin_stats")).error?.code).toBe("42501");
+    expect((await owner.client.rpc("admin_list_users", {})).error?.code).toBe("42501");
+    expect((await owner.client.rpc("admin_set_user_suspended", { p_user: dev.id, p_suspended: true })).error?.code).toBe("42501");
+    expect(ok(await owner.client.from("admin_audit_log").select("id"), "audit")).toHaveLength(0);
+  });
+
+  it("a platform admin can see numbers, suspend and restore an account, and it is logged", async () => {
+    const client = db();
+    await client.connect();
+    try {
+      await client.query("insert into private.platform_admins (email) values ($1) on conflict do nothing", [ownerB.email]);
+      const stats = ok(await ownerB.client.rpc("admin_stats"), "stats") as Record<string, number>;
+      expect(stats.users).toBeGreaterThan(0);
+      const found = ok(await ownerB.client.rpc("admin_list_users", { p_search: outsider.email }), "search");
+      expect(found.map((u: { id: string }) => u.id)).toEqual([outsider.id]);
+
+      ran(await ownerB.client.rpc("admin_set_user_suspended", { p_user: outsider.id, p_suspended: true }), "suspend");
+      expect((await admin.auth.admin.getUserById(outsider.id)).data.user?.banned_until).toBeTruthy();
+      ran(await ownerB.client.rpc("admin_set_user_suspended", { p_user: outsider.id, p_suspended: false }), "restore");
+      expect((await admin.auth.admin.getUserById(outsider.id)).data.user?.banned_until ?? null).toBeNull();
+
+      const log = ok(await ownerB.client.from("admin_audit_log").select("action").eq("actor_id", ownerB.id), "log");
+      expect(log.map((l) => l.action)).toEqual(expect.arrayContaining(["user_suspended", "user_restored"]));
+      // Metadata only: being a platform admin grants no access to organization content.
+      expect(ok(await ownerB.client.from("tasks").select("id").eq("organization_id", org.A), "content")).toHaveLength(0);
+    } finally {
+      await client.query("delete from private.platform_admins where email = $1", [ownerB.email]);
+      await client.query("delete from public.admin_audit_log where actor_id = $1", [ownerB.id]);
+      await client.end();
+    }
   });
 });

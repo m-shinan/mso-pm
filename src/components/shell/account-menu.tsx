@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyRound, LogOut, Mail, Monitor, Moon, Sun } from "lucide-react";
+import { Inbox, KeyRound, Lightbulb, LogOut, Mail, Monitor, Moon, Settings, ShieldCheck, Sun, TriangleAlert, Volume2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Avatar } from "@/components/ui/avatar";
@@ -10,10 +10,18 @@ import { supabaseBrowser } from "@/lib/supabase/client";
 import { setTheme, useTheme, type ThemeChoice } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
+import { FeedbackDialog, type FeedbackKind } from "@/features/feedback/feedback-dialog";
+import { playChime, setSoundEnabled, soundEnabled } from "@/lib/notify-sound";
 import { useOrg } from "./org-provider";
 
 export function AccountMenu({ compact }: { compact?: boolean }) {
-  const { member, currentUserId } = useOrg();
+  const { org, member, currentUserId } = useOrg();
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackKind, setFeedbackKind] = useState<FeedbackKind>("feature");
+  // Platform admins (who read feedback) see the inbox link; checked when the menu first opens.
+  const [isAdmin, setIsAdmin] = useState(false);
+  // Per-device; read when the menu opens (localStorage isn't available on the server).
+  const [sound, setSound] = useState(true);
   const router = useRouter();
   const [pending, start] = useTransition();
   const me = member(currentUserId);
@@ -23,9 +31,20 @@ export function AccountMenu({ compact }: { compact?: boolean }) {
   const [emails, setEmails] = useState<boolean | null>(null);
 
   async function loadEmails(open: boolean) {
+    if (open) setSound(soundEnabled());
     if (!open || emails !== null) return;
-    const { data } = await supabaseBrowser().from("profiles").select("email_notifications").eq("id", currentUserId).single();
+    const db = supabaseBrowser();
+    const [{ data }, admin] = await Promise.all([
+      db.from("profiles").select("email_notifications").eq("id", currentUserId).single(),
+      db.rpc("is_platform_admin"),
+    ]);
     if (data) setEmails(data.email_notifications);
+    setIsAdmin(admin.data === true);
+  }
+
+  function openFeedback(kind: FeedbackKind) {
+    setFeedbackKind(kind);
+    setFeedbackOpen(true);
   }
 
   async function toggleEmails(on: boolean) {
@@ -38,6 +57,7 @@ export function AccountMenu({ compact }: { compact?: boolean }) {
   }
 
   return (
+    <>
     <Menu onOpenChange={loadEmails}>
       <MenuTrigger
         aria-label="Account"
@@ -56,11 +76,24 @@ export function AccountMenu({ compact }: { compact?: boolean }) {
       </MenuTrigger>
       <MenuContent align={compact ? "end" : "start"} label="Account" className="w-60">
         <MenuLabel>{me?.email}</MenuLabel>
+        <MenuItem onSelect={() => router.push("/account")}>
+          <Settings aria-hidden className="size-4 text-ink-4" /> Account settings
+        </MenuItem>
         <MenuItem onSelect={() => router.push("/account/password")}>
           <KeyRound aria-hidden className="size-4 text-ink-4" /> Change password
         </MenuItem>
         <MenuCheckboxItem checked={emails ?? false} disabled={emails === null} onCheckedChange={toggleEmails}>
           <Mail aria-hidden className="size-4 text-ink-4" /> Email notifications
+        </MenuCheckboxItem>
+        <MenuCheckboxItem
+          checked={sound}
+          onCheckedChange={(on) => {
+            setSound(on);
+            setSoundEnabled(on);
+            if (on) playChime();
+          }}
+        >
+          <Volume2 aria-hidden className="size-4 text-ink-4" /> Notification sound
         </MenuCheckboxItem>
         <MenuSeparator />
         <MenuLabel>Theme</MenuLabel>
@@ -70,10 +103,29 @@ export function AccountMenu({ compact }: { compact?: boolean }) {
           <MenuRadioItem value="dark"><Moon aria-hidden className="size-4 text-ink-4" /> Dark</MenuRadioItem>
         </MenuRadioGroup>
         <MenuSeparator />
+        <MenuItem onSelect={() => openFeedback("feature")}>
+          <Lightbulb aria-hidden className="size-4 text-ink-4" /> Request a feature
+        </MenuItem>
+        <MenuItem onSelect={() => openFeedback("issue")}>
+          <TriangleAlert aria-hidden className="size-4 text-ink-4" /> Report an issue
+        </MenuItem>
+        {isAdmin ? (
+          <>
+            <MenuItem onSelect={() => router.push("/admin")}>
+              <ShieldCheck aria-hidden className="size-4 text-ink-4" /> Admin console
+            </MenuItem>
+            <MenuItem onSelect={() => router.push("/feedback")}>
+              <Inbox aria-hidden className="size-4 text-ink-4" /> Feedback inbox
+            </MenuItem>
+          </>
+        ) : null}
+        <MenuSeparator />
         <MenuItem onSelect={() => start(() => signOut())}>
           <LogOut aria-hidden className="size-4 text-ink-4" /> {pending ? "Signing out…" : "Sign out"}
         </MenuItem>
       </MenuContent>
     </Menu>
+    <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} kind={feedbackKind} onKindChange={setFeedbackKind} organizationId={org.id} />
+    </>
   );
 }

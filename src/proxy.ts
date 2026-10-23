@@ -1,10 +1,15 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { HOME, sessionExpired } from "@/lib/auth";
 
-// Routes that work without a session.
-const PUBLIC = ["/login", "/signup", "/reset-password", "/auth/"];
-// Top-level routes that are not organization slugs.
-const RESERVED = new Set(["login", "signup", "reset-password", "onboarding", "invite", "auth", "account", "api"]);
+// Routes that work without a session (plus "/" itself, the landing page).
+const PUBLIC = ["/login", "/signup", "/reset-password", "/auth/", "/privacy", "/terms"];
+// Top-level routes that are not organization slugs. Keep in step with the
+// organizations_slug_not_reserved constraint in the database.
+const RESERVED = new Set([
+  "login", "signup", "reset-password", "onboarding", "invite", "auth", "account", "api", "app", "privacy", "terms", "feedback",
+  "verify", "admin",
+]);
 
 /**
  * Refreshes the Supabase session on every navigation and sends signed-out
@@ -33,18 +38,29 @@ export async function proxy(request: NextRequest) {
 
   // Nothing may run between creating the client and this call.
   const { data } = await supabase.auth.getClaims();
-  const signedIn = Boolean(data?.claims?.sub);
+  let signedIn = Boolean(data?.claims?.sub);
   const path = request.nextUrl.pathname;
 
-  if (!signedIn && !PUBLIC.some((p) => path === p || path.startsWith(p))) {
+  // Sign-ins last 30 days. Revoke this device's session (not the user's others) and start over.
+  if (signedIn && sessionExpired(data?.claims)) {
+    await supabase.auth.signOut({ scope: "local" });
+    signedIn = false;
+    if (path === "/login") return response;
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.search = path === "/" ? "" : `?next=${encodeURIComponent(path + request.nextUrl.search)}`;
+    url.search = "?expired=1";
+    return redirectWithCookies(url, response);
+  }
+
+  if (!signedIn && path !== "/" && !PUBLIC.some((p) => path === p || path.startsWith(p))) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.search = path === HOME ? "" : `?next=${encodeURIComponent(path + request.nextUrl.search)}`;
     return redirectWithCookies(url, response);
   }
   if (signedIn && (path === "/login" || path === "/signup")) {
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    url.pathname = HOME;
     url.search = "";
     return redirectWithCookies(url, response);
   }

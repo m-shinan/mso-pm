@@ -24,7 +24,7 @@ export default async function InvitePage({ params }: PageProps<"/invite/[token]"
     body = (
       <>
         <p className="text-base text-ink-2">This invitation to {inv.organization_name} has already been used.</p>
-        <Link href="/" className={buttonClass("secondary", "md", "self-start max-lg:h-11")}>Go to your dashboard</Link>
+        <Link href="/app" className={buttonClass("secondary", "md", "self-start max-lg:h-11")}>Go to your dashboard</Link>
       </>
     );
   } else if (inv.expired) {

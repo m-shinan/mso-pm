@@ -9,7 +9,7 @@ export default function NotFound() {
       <p className="max-w-sm text-base text-ink-3">
         This page doesn’t exist, or it belongs to an organization you’re not a member of.
       </p>
-      <Link href="/" className={buttonClass("secondary", "md", "mt-2 max-lg:h-11")}>Go to your dashboard</Link>
+      <Link href="/app" className={buttonClass("secondary", "md", "mt-2 max-lg:h-11")}>Go to your dashboard</Link>
     </div>
   );
 }
