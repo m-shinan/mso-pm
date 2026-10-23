@@ -10,6 +10,8 @@ interface OrgContextValue extends Omit<OrgContextData, "options"> {
   org: Organization;
   orgs: Organization[];
   config: OrgConfig;
+  /** Runs the whole app (private.platform_admins), not an organization role. Only shows links; RLS guards the console. */
+  isPlatformAdmin: boolean;
   member: (id: string | null | undefined) => Member | undefined;
   can: (p: Permission) => boolean;
   href: (path?: string) => string;
@@ -22,11 +24,13 @@ export function OrgProvider({
   org,
   orgs,
   data,
+  isPlatformAdmin = false,
   children,
 }: {
   org: Organization;
   orgs: Organization[];
   data: OrgContextData;
+  isPlatformAdmin?: boolean;
   children: ReactNode;
 }) {
   const value = useMemo<OrgContextValue>(() => {
@@ -35,12 +39,13 @@ export function OrgProvider({
       ...data,
       org,
       orgs,
+      isPlatformAdmin,
       config: buildConfig(data.options),
       member: (id) => (id ? byId.get(id) : undefined),
       can: (p) => can(data.permissions, p),
       href: (path = "") => `/${org.slug}${path}`,
     };
-  }, [org, orgs, data]);
+  }, [org, orgs, data, isPlatformAdmin]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bug, Folder, LayoutGrid, Menu as MenuIcon, Plus, Search } from "lucide-react";
+import { Bug, Folder, LayoutGrid, Menu as MenuIcon, Plus, Search, ShieldCheck } from "lucide-react";
 import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/ui/menu";
 import { AccountMenu } from "./account-menu";
 import { NotificationBell } from "./notification-bell";
@@ -32,7 +32,7 @@ export function MobileTopBar() {
 
 /** Phone bottom navigation. "More" holds the sections that don't fit. */
 export function MobileBottomNav() {
-  const { org, href } = useOrg();
+  const { org, href, isPlatformAdmin } = useOrg();
   const pathname = usePathname();
   const router = useRouter();
   const tab = (path: string, label: string, Icon: typeof Folder) => {
@@ -73,6 +73,12 @@ export function MobileBottomNav() {
               {item.label}
             </MenuItem>
           ))}
+          {isPlatformAdmin ? (
+            <MenuItem onSelect={() => router.push("/admin")}>
+              <ShieldCheck aria-hidden className="size-[18px] text-accent" />
+              Admin console
+            </MenuItem>
+          ) : null}
         </MenuContent>
       </Menu>
     </nav>

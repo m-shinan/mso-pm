@@ -1,6 +1,7 @@
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { PwaSetup } from "@/components/pwa";
 import { Toaster } from "@/components/ui/toast";
 import "./globals.css";
 
@@ -10,6 +11,9 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 export const metadata: Metadata = {
   title: { default: "mso-pm", template: "%s · mso-pm" },
   description: "Projects, tasks, issues and releases across your organizations.",
+  applicationName: "mso-pm",
+  // Opened from the iPhone Home Screen: full screen, app name under the icon.
+  appleWebApp: { capable: true, title: "mso-pm", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
@@ -32,6 +36,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-dvh">
         <Toaster>{children}</Toaster>
+        <PwaSetup />
         {/* Cookieless page views; only collects once Web Analytics is enabled for the Vercel project.
             Vercel serves its script, so elsewhere (CI, `next start`) it would only 404. */}
         {process.env.VERCEL ? <Analytics /> : null}

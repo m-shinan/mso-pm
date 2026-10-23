@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search } from "lucide-react";
+import { Search, ShieldCheck } from "lucide-react";
 import { AccountMenu } from "./account-menu";
 import { Count, Kbd } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -42,7 +42,7 @@ function NavLink({ item, count, extra }: { item: NavItem; count?: number; extra?
 }
 
 export function Sidebar({ counts }: { counts: NavCounts }) {
-  const { projects, href } = useOrg();
+  const { projects, href, isPlatformAdmin } = useOrg();
   const pinned = projects.filter((p) => p.pinned);
 
   return (
@@ -93,8 +93,14 @@ export function Sidebar({ counts }: { counts: NavCounts }) {
         )}
       </nav>
 
-      <div className="px-3 py-2">
+      <div className="flex flex-col gap-0.5 px-3 py-2">
         <NavLink item={SETTINGS_NAV} />
+        {isPlatformAdmin ? (
+          <Link href="/admin" className="flex h-8 items-center gap-2.5 rounded-md px-2.5 text-base text-ink-2 hover:bg-subtle">
+            <ShieldCheck aria-hidden className="size-4 text-accent" strokeWidth={1.7} />
+            <span className="grow">Admin console</span>
+          </Link>
+        ) : null}
       </div>
       <div className="border-t border-line px-1.5 py-1.5">
         <AccountMenu />

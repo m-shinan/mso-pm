@@ -8,7 +8,7 @@ const PUBLIC = ["/login", "/signup", "/reset-password", "/auth/", "/privacy", "/
 // organizations_slug_not_reserved constraint in the database.
 const RESERVED = new Set([
   "login", "signup", "reset-password", "onboarding", "invite", "auth", "account", "api", "app", "privacy", "terms", "feedback",
-  "verify", "admin",
+  "verify", "admin", "icons", "apple-icon", "offline",
 ]);
 
 /**
@@ -83,5 +83,6 @@ function redirectWithCookies(url: URL, from: NextResponse) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/|favicon.ico|.*\\.[a-z0-9]+$).*)"],
+  // Skips static files and the app icons (they must load before anyone signs in).
+  matcher: ["/((?!_next/|favicon.ico|apple-icon|icons/|.*\\.[a-z0-9]+$).*)"],
 };

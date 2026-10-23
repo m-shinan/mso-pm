@@ -9,7 +9,7 @@ import { chatUnreadTotal } from "@/features/chat/queries";
 import { getDashboard } from "@/features/dashboard/queries";
 import { listNotifications } from "@/features/misc/queries";
 import { getOrg, getOrgContext, listMyOrgs } from "@/features/org/queries";
-import { getUserId } from "@/lib/supabase/server";
+import { createClient, getUserId } from "@/lib/supabase/server";
 
 export default async function OrgLayout({ children, params }: LayoutProps<"/[org]">) {
   const userId = await getUserId();
@@ -23,12 +23,14 @@ export default async function OrgLayout({ children, params }: LayoutProps<"/[org
     notFound();
   }
 
-  const [orgs, data, summary, notifications, chatUnread] = await Promise.all([
+  const supabase = await createClient();
+  const [orgs, data, summary, notifications, chatUnread, admin] = await Promise.all([
     listMyOrgs(),
     getOrgContext(org.id),
     getDashboard(org.id),
     listNotifications(org.id),
     chatUnreadTotal(org.id),
+    supabase.rpc("is_platform_admin"),
   ]);
 
   const counts = {
@@ -40,7 +42,7 @@ export default async function OrgLayout({ children, params }: LayoutProps<"/[org
   };
 
   return (
-    <OrgProvider org={org} orgs={orgs} data={data}>
+    <OrgProvider org={org} orgs={orgs} data={data} isPlatformAdmin={admin.data === true}>
       <LiveNotificationsProvider userId={userId} orgId={org.id} initial={notifications}>
       {/* Desktop: the window stays put; the sidebar and the page scroll separately. */}
       <div className="flex min-h-dvh lg:h-dvh lg:overflow-hidden">

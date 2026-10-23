@@ -1,6 +1,6 @@
 "use client";
 
-import { Inbox, KeyRound, Lightbulb, LogOut, Mail, Monitor, Moon, Settings, ShieldCheck, Sun, TriangleAlert, Volume2 } from "lucide-react";
+import { Download, Inbox, KeyRound, Lightbulb, LogOut, Mail, Monitor, Moon, Settings, ShieldCheck, Sun, TriangleAlert, Volume2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Avatar } from "@/components/ui/avatar";
@@ -10,16 +10,18 @@ import { supabaseBrowser } from "@/lib/supabase/client";
 import { setTheme, useTheme, type ThemeChoice } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
+import { IosInstallDialog } from "@/components/pwa";
 import { FeedbackDialog, type FeedbackKind } from "@/features/feedback/feedback-dialog";
+import { promptInstall, useInstallState } from "@/lib/install-prompt";
 import { playChime, setSoundEnabled, soundEnabled } from "@/lib/notify-sound";
 import { useOrg } from "./org-provider";
 
 export function AccountMenu({ compact }: { compact?: boolean }) {
-  const { org, member, currentUserId } = useOrg();
+  const { org, member, currentUserId, isPlatformAdmin: isAdmin } = useOrg();
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackKind, setFeedbackKind] = useState<FeedbackKind>("feature");
-  // Platform admins (who read feedback) see the inbox link; checked when the menu first opens.
-  const [isAdmin, setIsAdmin] = useState(false);
+  const install = useInstallState();
+  const [iosInstall, setIosInstall] = useState(false);
   // Per-device; read when the menu opens (localStorage isn't available on the server).
   const [sound, setSound] = useState(true);
   const router = useRouter();
@@ -33,13 +35,8 @@ export function AccountMenu({ compact }: { compact?: boolean }) {
   async function loadEmails(open: boolean) {
     if (open) setSound(soundEnabled());
     if (!open || emails !== null) return;
-    const db = supabaseBrowser();
-    const [{ data }, admin] = await Promise.all([
-      db.from("profiles").select("email_notifications").eq("id", currentUserId).single(),
-      db.rpc("is_platform_admin"),
-    ]);
+    const { data } = await supabaseBrowser().from("profiles").select("email_notifications").eq("id", currentUserId).single();
     if (data) setEmails(data.email_notifications);
-    setIsAdmin(admin.data === true);
   }
 
   function openFeedback(kind: FeedbackKind) {
@@ -120,12 +117,18 @@ export function AccountMenu({ compact }: { compact?: boolean }) {
           </>
         ) : null}
         <MenuSeparator />
+        {install === "prompt" || install === "ios" ? (
+          <MenuItem onSelect={() => (install === "ios" ? setIosInstall(true) : void promptInstall())}>
+            <Download aria-hidden className="size-4 text-ink-4" /> Install app
+          </MenuItem>
+        ) : null}
         <MenuItem onSelect={() => start(() => signOut())}>
           <LogOut aria-hidden className="size-4 text-ink-4" /> {pending ? "Signing out…" : "Sign out"}
         </MenuItem>
       </MenuContent>
     </Menu>
     <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} kind={feedbackKind} onKindChange={setFeedbackKind} organizationId={org.id} />
+    <IosInstallDialog open={iosInstall} onOpenChange={setIosInstall} />
     </>
   );
 }

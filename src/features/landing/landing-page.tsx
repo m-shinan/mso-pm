@@ -1,6 +1,7 @@
 import { ArrowRight, Check, FileText, Flag, FolderKanban, Globe, Mail, ShieldCheck, TriangleAlert, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
+import { InstallAppButton } from "@/components/pwa";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { buttonClass } from "@/components/ui/button";
 import { HOME } from "@/lib/auth";
@@ -107,6 +108,7 @@ export function LandingPage({ signedIn }: { signedIn: boolean }) {
               <Link href="/signup" className={primary}>Create an account</Link>
             )}
             <a href="#features" className={secondary}>See what’s inside</a>
+            <InstallAppButton className={secondary} />
           </div>
         </section>
 
