@@ -1,7 +1,7 @@
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { PwaSetup } from "@/components/pwa";
+import { InstallBanner, PwaSetup } from "@/components/pwa";
 import { Toaster } from "@/components/ui/toast";
 import { SITE_DESCRIPTION, SITE_KEYWORDS, SITE_NAME, SITE_TITLE, SITE_URL } from "@/lib/site";
 import "./globals.css";
@@ -54,6 +54,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-dvh">
         <Toaster>{children}</Toaster>
         <PwaSetup />
+        <InstallBanner />
         {/* Cookieless page views; only collects once Web Analytics is enabled for the Vercel project.
             Vercel serves its script, so elsewhere (CI, `next start`) it would only 404. */}
         {process.env.VERCEL ? <Analytics /> : null}

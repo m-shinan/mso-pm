@@ -107,9 +107,10 @@ const BOARD = [
 
 export function SiteLogo() {
   return (
-    <Link href="/" className="flex items-center gap-2.5 text-[16px] font-semibold">
+    <Link href="/" className="flex shrink-0 items-center gap-2.5 text-[16px] font-semibold whitespace-nowrap">
       <span aria-hidden className="inline-flex size-7 items-center justify-center rounded-[7px] bg-accent text-[13px] font-bold text-white">m</span>
-      mso-pm
+      {/* Only the tile on the narrowest phones, so the header stays one row. */}
+      <span className="max-[359px]:sr-only">mso-pm</span>
     </Link>
   );
 }
@@ -130,24 +131,25 @@ export function LandingPage({ signedIn }: { signedIn: boolean }) {
   return (
     <div className="min-h-dvh bg-canvas text-[15px] leading-[1.55] text-ink">
       <header className="sticky top-0 z-10 border-b border-line bg-canvas/90 backdrop-blur">
-        <div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-x-7 gap-y-3 px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-[1200px] items-center gap-x-3 px-4 py-2.5 sm:px-6 sm:py-3 md:gap-x-7">
           <SiteLogo />
-          <nav aria-label="Sections" className="flex grow flex-wrap gap-x-5 gap-y-1 text-md text-ink-2 max-sm:order-last max-sm:w-full">
+          {/* Phones and small tablets scroll to the sections instead: the links don't fit beside the buttons. */}
+          <nav aria-label="Sections" className="flex grow gap-x-5 text-md whitespace-nowrap text-ink-2 max-md:hidden">
             <a href="#features" className="hover:text-ink">Features</a>
             <a href="#how" className="hover:text-ink">How it works</a>
             <a href="#security" className="hover:text-ink">Security</a>
             <a href="#contact" className="hover:text-ink">Contact</a>
           </nav>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-1 sm:gap-2">
             <ThemeToggle />
             {signedIn ? (
-              <Link href={HOME} className={buttonClass("primary", "md", "h-10 px-4 text-md")}>
+              <Link href={HOME} className={buttonClass("primary", "md", "h-10 px-3 text-md sm:px-4")}>
                 Open dashboard <ArrowRight aria-hidden className="size-4" />
               </Link>
             ) : (
               <>
-                <Link href="/login" className={buttonClass("ghost", "md", "h-10 px-3.5 text-md")}>Sign in</Link>
-                <Link href="/signup" className={buttonClass("primary", "md", "h-10 px-4 text-md")}>Get started</Link>
+                <Link href="/login" className={buttonClass("ghost", "md", "h-10 px-2.5 text-md sm:px-3.5")}>Sign in</Link>
+                <Link href="/signup" className={buttonClass("primary", "md", "h-10 px-3 text-md sm:px-4")}>Get started</Link>
               </>
             )}
           </div>
