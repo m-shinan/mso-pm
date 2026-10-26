@@ -288,7 +288,7 @@ function Card({ task, blockers, onMove, draggable }: { task: TaskRow; blockers: 
       {...listeners}
       aria-roledescription="Draggable task"
       aria-label={`${task.key} ${task.title}`}
-      className={cn("rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-accent", draggable && "cursor-grab touch-manipulation", isDragging && "opacity-40")}
+      className={cn("rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-focus", draggable && "cursor-grab touch-manipulation", isDragging && "opacity-40")}
     >
       <CardBody task={task} blockers={blockers} onMove={onMove} />
     </div>

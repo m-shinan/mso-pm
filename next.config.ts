@@ -12,6 +12,10 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Revisiting a page within 30s renders instantly from the client cache instead of
+  // waiting on the server. router.refresh() after a mutation, and LiveRefresh, still
+  // fetch fresh data.
+  experimental: { staleTimes: { dynamic: 30 } },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },
