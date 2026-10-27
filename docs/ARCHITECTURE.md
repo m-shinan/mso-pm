@@ -48,6 +48,7 @@ The active organization is in the URL: `/{orgSlug}/...`.
 
 ```
 /login  /signup  /reset-password  /onboarding (create first org)  /invite/[token]
+/oauth/consent  /oauth/decision  /api/mcp      AI apps (MCP), see §8
 /[org]                      dashboard
 /[org]/my-tasks
 /[org]/projects             /[org]/projects/[key]/{overview,tasks,board,issues,releases,calendar,docs,activity,settings}
@@ -219,6 +220,19 @@ Also built:
   change, failures ignored). Off until three Vault secrets exist (`resend_api_key`,
   `email_from`, `app_url`), set with `scripts/email-setup.mjs`. Each person can turn
   emails off in the account menu (`profiles.email_notifications`).
+- **MCP server** (`src/features/mcp/server.ts`, served at `/api/mcp` by
+  `src/app/api/mcp/[[...path]]/route.ts`): lets ChatGPT, Claude, Cursor and other MCP
+  clients use mso-pm as the signed-in user. Supabase Auth is the OAuth 2.1
+  authorization server (dynamic client registration on); clients find it through
+  `/api/mcp/oauth-protected-resource` (RFC 9728) and the `WWW-Authenticate` header on
+  the 401. People approve a client on `/oauth/consent`, which posts to `/oauth/decision`.
+  `withSupabase({ auth: "user" })` verifies the token against the project JWKS (needs
+  an ES256/RS256 signing key) and hands the tools a client scoped to that user, so RLS,
+  numbering, activity and notification triggers behave exactly as in the app; no
+  service key is involved. Stateless: a new `McpServer` per request, which fits Vercel
+  functions but rules out server-initiated messages (sampling). `/api/mcp` is in the
+  proxy's `PUBLIC` list because it checks bearer tokens itself; `oauth` is a reserved
+  slug. `tests/mcp.test.ts` covers discovery, forged tokens, isolation and role limits.
 - **Browser tests** (`e2e/`, Playwright) and **CI** (`.github/workflows/ci.yml`): on every
   push and pull request, typecheck, lint, the database security tests and the browser
   tests run against the live project with throwaway users and organizations that are

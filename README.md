@@ -27,6 +27,10 @@ License: [AGPL-3.0](LICENSE)
   project manager, developer and viewer roles, custom roles, per-project
   overrides, single-use email invitations.
 - **Clients and docs**: client records with their projects; docs next to the work.
+- **Use it from ChatGPT, Claude and other AI apps**: a built-in MCP server lets
+  people list, create and update tasks and comment from their AI assistant,
+  signed in with their own mso-pm account and limited to what their role allows
+  ([how to connect](#connect-an-ai-app-mcp)).
 - **Accounts**: 6-digit email codes for sign-up and password reset, 30-day
   sessions, email preferences, delete account.
 - **Admin console** for whoever runs the installation: usage numbers, users
@@ -35,10 +39,32 @@ License: [AGPL-3.0](LICENSE)
 - **Installable** on Android, iPhone and desktop (PWA), light and dark themes,
   works on phones.
 
+## Connect an AI app (MCP)
+
+mso-pm is an [MCP](https://modelcontextprotocol.io) server at
+`https://pm.mshinan.com/api/mcp` (or `/api/mcp` on your own copy). Add that URL
+in your AI app, sign in with your mso-pm account, and click **Allow**:
+
+| App | Where |
+|---|---|
+| Claude (web and desktop) | Settings → Connectors → Add custom connector |
+| ChatGPT | Settings → Connectors, with developer mode on |
+| Claude Code | `claude mcp add --transport http mso-pm https://pm.mshinan.com/api/mcp`, then `/mcp` to sign in |
+| Cursor | `.cursor/mcp.json`: `{ "mcpServers": { "mso-pm": { "url": "https://pm.mshinan.com/api/mcp" } } }` |
+| VS Code | `.vscode/mcp.json`: `{ "servers": { "mso-pm": { "type": "http", "url": "https://pm.mshinan.com/api/mcp" } } }` |
+
+Tools: `list_organizations`, `list_projects`, `list_tasks`, `get_task`,
+`create_task`, `update_task`, `add_comment`. Then just ask, for example
+*"What's assigned to me in WEB?"* or *"Move WEB-41 to Review and comment that it's ready."*
+
+Every call runs as you, so the AI sees and changes only what you could in the
+app, and your teammates get the usual notifications.
+
 ## How it's built
 
 Next.js 16 (App Router, Server Components) · Supabase (Postgres, Auth,
-Realtime, Vault, `pg_cron`, `pg_net`) · Tailwind CSS v4 · Cloudflare R2 for
+Realtime, Vault, `pg_cron`, `pg_net`, OAuth 2.1 server) · Tailwind CSS v4 ·
+MCP (`@modelcontextprotocol/server`, `@supabase/server`) · Cloudflare R2 for
 files · Resend for email · Vercel for hosting.
 
 Every table has row-level security, so the database itself decides who can
@@ -103,6 +129,14 @@ your own sender before inviting anyone:
    `R2_BUCKET` in `.env.local`.
 
 Without R2, everything works except attachments, which say storage isn't set up.
+
+### Optional: AI apps (MCP)
+
+In Supabase, use an asymmetric JWT signing key (ES256 or RS256, the default
+for new projects), then under Authentication → OAuth Server turn the server
+on, set the authorization path to `/oauth/consent` and allow dynamic client
+registration. Set Authentication → URL Configuration → Site URL to your app's
+address. Nothing else to deploy: the endpoint is part of the app.
 
 ### 5. Deploy (Vercel)
 
