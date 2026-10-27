@@ -3,12 +3,13 @@ import { NextResponse, type NextRequest } from "next/server";
 import { HOME, sessionExpired } from "@/lib/auth";
 
 // Routes that work without a session (plus "/" itself, the landing page).
-const PUBLIC = ["/login", "/signup", "/reset-password", "/auth/", "/privacy", "/terms"];
+// /api/mcp checks its own bearer tokens (src/features/mcp/server.ts).
+const PUBLIC = ["/login", "/signup", "/reset-password", "/auth/", "/privacy", "/terms", "/api/mcp"];
 // Top-level routes that are not organization slugs. Keep in step with the
 // organizations_slug_not_reserved constraint in the database.
 const RESERVED = new Set([
   "login", "signup", "reset-password", "onboarding", "invite", "auth", "account", "api", "app", "privacy", "terms", "feedback",
-  "verify", "admin", "icons", "icon", "apple-icon", "offline",
+  "verify", "admin", "icons", "icon", "apple-icon", "offline", "oauth",
 ]);
 
 /**
