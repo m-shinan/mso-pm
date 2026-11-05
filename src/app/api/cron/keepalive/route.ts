@@ -8,7 +8,8 @@ export async function GET() {
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
     auth: { persistSession: false },
   });
-  const { error } = await supabase.from("attachments").select("id").limit(1);
+  // chat_channels is one of the few tables the anon role is granted (RLS still hides every row).
+  const { error } = await supabase.from("chat_channels").select("id").limit(1);
   if (error) return Response.json({ ok: false, error: error.message }, { status: 500 });
   return Response.json({ ok: true });
 }
