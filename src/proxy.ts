@@ -4,7 +4,7 @@ import { HOME, sessionExpired } from "@/lib/auth";
 
 // Routes that work without a session (plus "/" itself, the landing page).
 // /api/mcp checks its own bearer tokens (src/features/mcp/server.ts).
-const PUBLIC = ["/login", "/signup", "/reset-password", "/auth/", "/privacy", "/terms", "/api/mcp"];
+const PUBLIC = ["/login", "/signup", "/reset-password", "/auth/", "/privacy", "/terms", "/api/mcp", "/api/cron/"];
 // Top-level routes that are not organization slugs. Keep in step with the
 // organizations_slug_not_reserved constraint in the database.
 const RESERVED = new Set([
